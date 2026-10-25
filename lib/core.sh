@@ -18,7 +18,7 @@ GI_UI_ACTIVE=0
 GI_ABORTED=0
 GI_CURRENT_STEP=""
 GI_STEP_INDEX=0
-GI_STEP_TOTAL=8
+GI_STEP_TOTAL=9
 GI_RUN_COUNTER=0
 GI_LAST_LOG=""
 GI_LAST_COMMAND=""
@@ -32,14 +32,14 @@ CONFIG_KEYS=(
     PART_ESP PART_BOOT PART_SWAP PART_ROOT PART_HOME
     FORMAT_ESP FORMAT_BOOT FORMAT_SWAP FORMAT_ROOT FORMAT_HOME
     UUID_ESP UUID_BOOT UUID_SWAP UUID_ROOT UUID_HOME BOOT_FS
-    STAGE_FLAVOR MIRROR STAGE_URL PROFILE CPU_FLAGS UPDATE_WORLD MAKE_JOBS
+    STAGE_FLAVOR MIRROR STAGE_URL PROFILE DESKTOP CPU_FLAGS UPDATE_WORLD MAKE_JOBS
     CFLAGS VIDEO_CARDS USE_EXTRA
     KERNEL_MODE FIRMWARE MICROCODE KERNEL_CMDLINE BOOTLOADER
     HOSTNAME TIMEZONE LOCALE KEYMAP HWCLOCK NETWORK SSH CRON CHRONY SYSLOG
     SUDO USERNAME CREATE_USER
 )
 
-STATE_STEPS=(disk stage3 portage kernel system tools bootloader finalize)
+STATE_STEPS=(disk stage3 portage kernel system tools bootloader desktop finalize)
 declare -A STATE_DONE=()
 VALIDATION_ERRORS=()
 UI_RESULT=""
@@ -264,6 +264,7 @@ config_defaults() {
     CFG_MIRROR="https://distfiles.gentoo.org"
     CFG_STAGE_URL=""
     CFG_PROFILE=stage
+    CFG_DESKTOP=none
     CFG_CPU_FLAGS=yes
     CFG_UPDATE_WORLD=no
     CFG_MAKE_JOBS=auto
@@ -418,6 +419,7 @@ state_label() {
         system) printf 'Настройка системы' ;;
         tools) printf 'Системные службы' ;;
         bootloader) printf 'Загрузчик GRUB' ;;
+        desktop) printf 'Графическое окружение' ;;
         finalize) printf 'Завершение' ;;
         *) printf '%s' "$1" ;;
     esac
@@ -439,6 +441,20 @@ config_derived() {
     if [[ $CFG_STAGE_FLAVOR == desktop-* && $CFG_PROFILE == stage ]]; then
         CFG_PROFILE=desktop
     fi
+    # Keep the Portage profile consistent with the desktop environment choice
+    # while preserving explicit KDE and hardened profiles. GNOME also replaces
+    # the generic desktop profile because GDM requires elogind/systemd USE flags
+    # that the GNOME profile enables.
+    case "$CFG_DESKTOP" in
+        xfce)
+            [[ $CFG_PROFILE == stage ]] && CFG_PROFILE=desktop
+            ;;
+        gnome)
+            if [[ $CFG_PROFILE == stage || $CFG_PROFILE == desktop ]]; then
+                CFG_PROFILE=gnome
+            fi
+            ;;
+    esac
     if [[ $CFG_SWAP_MODE != custom ]]; then
         CFG_SWAP_MIB=0
     fi

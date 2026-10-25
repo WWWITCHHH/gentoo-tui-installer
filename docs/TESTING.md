@@ -21,9 +21,10 @@ make lint      # только ShellCheck
 | `tests/unit/test_kernel.sh` | удаление `root=`, `/etc/kernel/cmdline`, dracut config, `/etc/default/grub`, quoting одинарных кавычек. |
 | `tests/unit/test_ui.sh` | progress bar, перенос текста, валидатор целых чисел. |
 | `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля. |
+| `tests/unit/test_desktop.sh` | списки пакетов XFCE/GNOME, LightDM/GDM, OpenRC-службы и `/etc/conf.d/display-manager`, systemd-цель, группы пользователя, проверка установки, сетевое требование для незавершённого desktop-этапа. |
 | `tests/unit/test_config_example.sh` | все ключи `CONFIG_KEYS` присутствуют, нет дубликатов и паролей, пример загружается и даёт ожидаемые значения. |
 
-На момент 1.0.0 выполняется 230 assertions в 7 файлах. Число может меняться;
+На момент 1.1.0 выполняется 288 assertions в 8 файлах. Число может меняться;
 важен нулевой код возврата, а не точное количество.
 
 ### Harness
@@ -80,7 +81,7 @@ sudo apt-get install shellcheck
 
 ## Ручная проверка в виртуальной машине
 
-В версии 1.0.0 **нет автоматического интеграционного теста с реальной
+В версии 1.1.0 **нет автоматического интеграционного теста с реальной
 разметкой и загрузкой**. Перед использованием на физическом компьютере
 обязательно пройдите сценарий в VM.
 
@@ -123,6 +124,9 @@ qemu-system-x86_64 \
 - [ ] BIOS + MBR, OpenRC, `gentoo-kernel-bin`, xfs, swap custom, `/home`.
 - [ ] UEFI + GPT, systemd, `gentoo-kernel`, btrfs, без swap.
 - [ ] UEFI + GPT, OpenRC, `gentoo-sources` + `menuconfig`, ext4.
+- [ ] UEFI + GPT, OpenRC, XFCE + LightDM, `VIDEO_CARDS` заданы.
+- [ ] UEFI + GPT, systemd, GNOME + GDM, `VIDEO_CARDS` заданы.
+- [ ] `DESKTOP=none`: этап графики пропускается, система загружается в консоль.
 - [ ] Ручная схема: существующие ESP/root/`/home`, `FORMAT_ESP=no`,
       `FORMAT_HOME=no`.
 - [ ] Прерывание после `stage3` и продолжение через `--resume`.
@@ -135,6 +139,9 @@ qemu-system-x86_64 \
 Опционально:
 
 - [ ] Каждый вариант stage3 (`openrc`, `systemd`, `desktop-*`).
+- [ ] XFCE на systemd и GNOME на OpenRC (проверка профилей и служб).
+- [ ] Смена `DESKTOP` после Portage: предупреждение мастера и работу с текущим
+      профилем.
 - [ ] XFS/ext4/Btrfs для root и `/home` в разных комбинациях.
 - [ ] `NETWORK=networkmanager`, `SSH=yes`, `SUDO=no`, `CREATE_USER=no`.
 - [ ] Микрокод Intel и AMD на соответствующем CPU.
@@ -150,6 +157,10 @@ qemu-system-x86_64 \
 - `passwd -S root` и `passwd -S <user>` показывают установленный пароль.
 - Пользователь входит и имеет ожидаемые группы (`wheel`, `audio`, `video`).
 - Работают выбранные службы: `rc-status` или `systemctl status`.
+- При `DESKTOP=xfce` запускается LightDM (`DISPLAYMANAGER="lightdm"`), входит
+  пользователь и стартует сеанс XFCE.
+- При `DESKTOP=gnome` запускается GDM, входит пользователь и стартует сеанс
+  GNOME; для OpenRC работает `elogind`, для systemd — `graphical.target`.
 - `locale`, `timedatectl`/`hwclock`, `hostnamectl`/`hostname` корректны.
 - В журналах установщика нет паролей и секретов.
 - `emerge --info` использует выбранный профиль, CFLAGS, USE и `CPU_FLAGS_X86`.

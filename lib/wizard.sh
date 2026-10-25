@@ -216,7 +216,7 @@ wizard_edit_stage() {
             "flavor|Stage3: ${CFG_STAGE_FLAVOR}|openrc/systemd, desktop-варианты" \
             "mirror|Зеркало: ${CFG_MIRROR}|Базовый URL distfiles.gentoo.org" \
             "stageurl|Прямой URL stage3: ${CFG_STAGE_URL:-автоматически}|Пусто — взять latest-stage3" \
-            "profile|Профиль: ${CFG_PROFILE}|stage, desktop, gnome, kde, hardened" \
+            "profile|Профиль: ${CFG_PROFILE}|stage, desktop, gnome, kde, hardened; согласуется с DESKTOP" \
             "cpu|CPU_FLAGS_X86: ${CFG_CPU_FLAGS}|Определить через cpuid2cpuflags" \
             "world|Обновлять @world: ${CFG_UPDATE_WORLD}|Может занять много времени" \
             "jobs|MAKEOPTS: ${CFG_MAKE_JOBS}|Число параллельных задач сборки" \
@@ -354,6 +354,40 @@ wizard_edit_kernel() {
     done
 }
 
+wizard_edit_desktop() {
+    local choice old_profile
+    if state_is_done desktop; then
+        ui_msg "Этап уже завершён" \
+            "Графическое окружение уже установлено. Чтобы изменить выбор,
+сбросьте состояние установки в главном меню."
+        return 0
+    fi
+    old_profile=$CFG_PROFILE
+    if ! ui_menu "Графическое окружение" \
+        "XFCE или GNOME; профиль Portage подстраивается под выбор" "$CFG_DESKTOP" \
+        "none|Без графической среды|Установить только консольную систему" \
+        "xfce|XFCE + LightDM|Лёгкая графическая среда для повседневной работы" \
+        "gnome|GNOME + GDM|Полноценная среда GNOME; большой объём пакетов"; then
+        return 0
+    fi
+    choice=$UI_RESULT
+    CFG_DESKTOP=$choice
+    config_derived
+    wizard_save
+    if [[ $CFG_PROFILE != "$old_profile" ]] && state_is_done portage; then
+        ui_msg "Профиль изменён после Portage" \
+            "Portage уже завершён, поэтому новый профиль ${CFG_PROFILE} не будет
+применён к установленной системе. Графическая среда будет установлена с
+текущим профилем. Для смены профиля сбросьте состояние и начните заново."
+    fi
+    if [[ $choice != none && -z $CFG_VIDEO_CARDS ]]; then
+        ui_msg "VIDEO_CARDS не заданы" \
+            "Для аппаратного ускорения укажите драйверы GPU в разделе
+«Stage3 и Portage → VIDEO_CARDS». Без VIDEO_CARDS Xorg может работать
+только с базовым режимом."
+    fi
+}
+
 wizard_edit_system() {
     local choice
     wizard_step_locked system "Система" || return 0
@@ -466,6 +500,7 @@ wizard_summary_text() {
     printf 'Зеркало: %s\n' "$CFG_MIRROR"
     [[ -n $CFG_STAGE_URL ]] && printf 'Прямой URL: %s\n' "$CFG_STAGE_URL"
     printf 'Профиль: %s (%s)\n' "$CFG_PROFILE" "$CFG_INIT"
+    printf 'Графическая среда: %s\n' "$(desktop_label)"
     printf 'CPU_FLAGS: %s; MAKEOPTS: %s; @world: %s\n' "$CFG_CPU_FLAGS" "$CFG_MAKE_JOBS" "$CFG_UPDATE_WORLD"
     printf 'CFLAGS: %s\n' "$CFG_CFLAGS"
     [[ -n $CFG_VIDEO_CARDS ]] && printf 'VIDEO_CARDS: %s\n' "$CFG_VIDEO_CARDS"
@@ -519,7 +554,8 @@ wizard_about() {
     ui_wrap "Установщик Gentoo Linux с консольным интерфейсом.
 
 Поддерживаются UEFI+GPT и BIOS+MBR, OpenRC и systemd,
-бинарное, дистрибутивное и ручное ядро, GRUB.
+бинарное, дистрибутивное и ручное ядро, GRUB,
+опциональные XFCE + LightDM и GNOME + GDM.
 Не поддерживаются LUKS, LVM, RAID, Secure Boot и dual boot.
 
 Проект распространяется по лицензии MIT.
@@ -552,6 +588,7 @@ wizard_main() {
             "kernel|Ядро и загрузчик|Бинарное, dist или ручное ядро"
             "system|Система|Имя, время, локаль, раскладка, часы"
             "services|Службы и пользователи|Сеть, SSH, cron, chrony, syslog, sudo"
+            "desktop|Графическое окружение|XFCE, GNOME или без графической среды"
             "summary|Проверить конфигурацию|Показать сводку и ошибки"
             "load|Загрузить конфигурацию|Прочитать файл KEY=\"value\""
             "save|Сохранить конфигурацию|Записать параметры в ${GI_CONFIG_FILE}"
@@ -577,6 +614,7 @@ wizard_main() {
             kernel) wizard_edit_kernel ;;
             system) wizard_edit_system ;;
             services) wizard_edit_services ;;
+            desktop) wizard_edit_desktop ;;
             summary) wizard_show_summary || true ;;
             load) wizard_load_config ;;
             save) wizard_save; ui_msg "Сохранено" "Конфигурация записана в ${GI_CONFIG_FILE}." ;;

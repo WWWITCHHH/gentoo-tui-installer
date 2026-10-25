@@ -17,8 +17,15 @@ Minimal CD
   ├─ глава 8  → система: hostname, время, locale, fstab, учётные записи
   ├─ глава 9  → службы и дополнительные утилиты
   ├─ глава 10 → GRUB: установка и генерация grub.cfg
+  ├─ графика  → Xorg + XFCE/LightDM или GNOME/GDM (вне core Handbook)
   └─ глава 11 → depclean, очистка, размонтирование, reboot
 ```
+
+Этап «Графика» добавлен после главы 10 и перед главой 11. Основной Handbook
+заканчивается настройкой загрузчика и финализацией; графические окружения
+описаны в отдельных руководствах Gentoo Desktop. Такое расположение оставляет
+базовую систему загрузочной даже при сбое установки графики, а финальный
+`depclean` выполняется уже после неё и видит все установленные пакеты.
 
 ## Главы Handbook
 
@@ -101,7 +108,9 @@ CD в нужном режиме — UEFI или BIOS. Preflight проверяе
 
 Варианты stage3: `openrc`, `systemd`, `desktop-openrc`, `desktop-systemd`.
 Desktop-варианты автоматически выбирают профиль `desktop`, если пользователь не
-выбрал `gnome`, `kde` или `hardened`.
+выбрал `gnome`, `kde` или `hardened`. Выбор `DESKTOP=xfce` или `DESKTOP=gnome`
+также подстраивает профиль: XFCE выбирает `desktop`, GNOME — `gnome`; явные
+`kde` и `hardened` сохраняются.
 
 ### Глава 6. Установка базовой системы
 
@@ -232,6 +241,42 @@ BIOS: grub-install --target=i386-pc --recheck /dev/sdX
 **Отличия:** другие загрузчики и автоматический dual boot не поддерживаются.
 `os-prober` отключён.
 
+### Графическое окружение (вне core Handbook)
+
+**Руководства Gentoo:** [Xfce](https://wiki.gentoo.org/wiki/Xfce),
+[GNOME](https://wiki.gentoo.org/wiki/GNOME),
+[Xorg](https://wiki.gentoo.org/wiki/Xorg).
+
+Этап выполняется после установки GRUB и до финализации. При `DESKTOP=none` он
+сразу отмечается завершённым и не требует сети.
+
+| Выбор | Пакеты | Дисплей-менеджер | Службы OpenRC | systemd |
+|---|---|---|---|---|
+| `xfce` | Xorg, `sys-apps/dbus`, `xfce-base/xfce4-meta`, `x11-misc/lightdm`, `x11-misc/lightdm-gtk-greeter`, `sys-auth/elogind` (OpenRC) | LightDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `lightdm.service`, `graphical.target` |
+| `gnome` | Xorg, `sys-apps/dbus`, `gnome-base/gnome`, `gnome-base/gdm`, `sys-auth/elogind` (OpenRC) | GDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `gdm.service`, `graphical.target` |
+
+Для OpenRC установщик пишет `/etc/conf.d/display-manager` с
+`DISPLAYMANAGER="lightdm"` или `DISPLAYMANAGER="gdm"`. Служба
+`display-manager` приходит из `gui-libs/display-manager-init`, которую
+подтягивает `xorg-server` в OpenRC-профиле. Для systemd включается
+соответствующий unit и графическая цель загрузки.
+
+Профиль Portage подбирается до этапа Portage: XFCE использует `desktop`, GNOME —
+`gnome`. Это важно для GDM: ему нужен `elogind` или `systemd`, а GNOME-профиль
+включает нужные USE-флаги. Если пользователь явно выбрал `kde` или `hardened`,
+установщик не перезаписывает профиль. Для OpenRC-графики в `USE` добавляется
+`elogind`: LightDM и GDM имеют `REQUIRED_USE="^^ ( elogind systemd )"`, а
+профиль `hardened` сам по себе его не включает.
+
+`VIDEO_CARDS` задаётся на этапе Portage. Если он пуст, Xorg может работать
+только с базовым режимом без аппаратного ускорения; установщик предупреждает
+об этом в мастере и на этапе графики.
+
+**Отличия:** поддерживаются только XFCE и GNOME. Установщик не настраивает
+Wayland-сессии вручную, темы, автологин, несколько мониторов и параметры
+клавиатуры внутри графической сессии. KDE-профиль Portage остаётся доступен,
+но KDE Plasma установщик не устанавливает.
+
 ### Глава 11. Завершение установки
 
 **Handbook:** <https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Finalizing>
@@ -239,7 +284,8 @@ BIOS: grub-install --target=i386-pc --recheck /dev/sdX
 Установщик выполняет `emerge --depclean`, `env-update`, удаляет скачанный
 stage3 и временные файлы, снимает chroot-монтирования и размонтирует целевую
 систему. Финальный экран показывает hostname, пользователя, загрузчик, ядро,
-часовой пояс, локаль и сеть.
+графическое окружение, часовой пояс, локаль и сеть. `depclean` запускается
+после этапа графики, поэтому не удаляет её зависимости.
 
 После этого нужно извлечь установочный носитель и выполнить `reboot`.
 
@@ -255,7 +301,9 @@ stage3 и временные файлы, снимает chroot-монтиров�
 - отдельные разделы `/var`, `/usr`, `/tmp`;
 - несколько дисков в одной установке;
 - автоматический dual boot;
-- альтернативные загрузчики (systemd-boot, GRUB с другими целями и т. п.).
+- альтернативные загрузчики (systemd-boot, GRUB с другими целями и т. п.);
+- KDE Plasma и другие графические окружения/оконные менеджеры;
+- настройка автологина, тем, Wayland-композиторов и параметров Xorg.
 
 Если нужен один из этих сценариев, используйте Handbook напрямую или добавьте
 поддержку в установщик и покройте её тестами.

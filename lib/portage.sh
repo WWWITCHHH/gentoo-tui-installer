@@ -79,9 +79,16 @@ portage_write_resolv() {
 
 portage_write_make_conf() {
     local make_conf="$GI_ROOT/etc/portage/make.conf"
-    local jobs flags grub_platforms
+    local jobs flags grub_platforms use_flags
     jobs=$(portage_make_jobs)
     flags=$CFG_CFLAGS
+    use_flags=$CFG_USE_EXTRA
+    if [[ $CFG_DESKTOP != none && $CFG_INIT == openrc ]]; then
+        # LightDM and GDM require exactly one of elogind/systemd. The desktop
+        # profile normally provides elogind, but an explicit hardened profile
+        # does not, so add it for all OpenRC desktop installations.
+        use_flags+="${use_flags:+ }elogind"
+    fi
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         grub_platforms="efi-64"
     else
@@ -99,8 +106,8 @@ portage_write_make_conf() {
         printf 'MAKEOPTS=%s\n' "$(shell_quote "-j${jobs}")"
         printf 'ACCEPT_LICENSE="*"\n'
         printf 'GRUB_PLATFORMS=%s\n' "$(shell_quote "$grub_platforms")"
-        if [[ -n $CFG_USE_EXTRA ]]; then
-            printf 'USE=%s\n' "$(shell_quote "$CFG_USE_EXTRA")"
+        if [[ -n $use_flags ]]; then
+            printf 'USE=%s\n' "$(shell_quote "$use_flags")"
         fi
         if [[ -n $CFG_VIDEO_CARDS ]]; then
             printf 'VIDEO_CARDS=%s\n' "$(shell_quote "$CFG_VIDEO_CARDS")"

@@ -57,6 +57,12 @@ assert_ok "bool yes" validate_bool yes
 assert_ok "bool no" validate_bool no
 assert_fail "bool true" validate_bool true
 
+assert_ok "desktop none" validate_desktop none
+assert_ok "desktop XFCE" validate_desktop xfce
+assert_ok "desktop GNOME" validate_desktop gnome
+assert_fail "desktop KDE" validate_desktop kde
+assert_fail "desktop empty" validate_desktop ""
+
 VALIDATION_MESSAGE=""
 assert_ok "hostname after reset" validate_hostname gentoo
 assert_eq "" "$VALIDATION_MESSAGE" "successful validators leave no message"

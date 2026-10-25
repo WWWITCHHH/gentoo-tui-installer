@@ -69,10 +69,14 @@ preflight_required_commands() {
 
 preflight_network() {
     local url="https://distfiles.gentoo.org/releases/amd64/autobuilds/"
+    local desktop_pending=0
+    if desktop_is_enabled && ! state_is_done desktop; then
+        desktop_pending=1
+    fi
     if command_exists curl && curl -fsIL --max-time 12 "$url" >/dev/null 2>&1; then
         preflight_line ok "Сеть и доступ к distfiles.gentoo.org работают"
     elif state_is_done stage3 && state_is_done portage && state_is_done kernel &&
-        state_is_done tools && state_is_done bootloader; then
+        state_is_done tools && state_is_done bootloader && ((!desktop_pending)); then
         preflight_line warn "Сеть недоступна, но все этапы, требующие загрузки пакетов, уже завершены"
     else
         preflight_line fail "Нет доступа к distfiles.gentoo.org; проверьте сеть Minimal CD"
@@ -230,7 +234,7 @@ preflight_install_media_warning() {
   • BIOS + MBR, загрузчик GRUB (/boot)
 
 Этапы: проверка → диск → stage3 → Portage → ядро → система
-→ службы → загрузчик → завершение.
+→ службы → загрузчик → графическое окружение → завершение.
 
 Продолжайте только если понимаете последствия."
     ui_header "Важно"

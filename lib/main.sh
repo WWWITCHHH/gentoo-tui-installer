@@ -88,6 +88,7 @@ step_description() {
         system) printf 'Имя хоста, время, локаль, раскладка, fstab, пароль root и пользователь.' ;;
         tools) printf 'Сеть, SSH, cron, chrony, системный журнал, sudo и gentoolkit.' ;;
         bootloader) printf 'Установка GRUB в ESP или MBR и генерация grub.cfg.' ;;
+        desktop) printf 'Xorg, XFCE + LightDM или GNOME + GDM; пропускается при DESKTOP=none.' ;;
         finalize) printf 'depclean, удаление временных файлов и размонтирование.' ;;
         *) printf '%s' "$1" ;;
     esac
@@ -99,7 +100,8 @@ main_banner() {
 Git: ${GI_GIT_VERSION:-недоступен}
 
 Установщик проведёт вас через этапы Gentoo Handbook:
-разметка → stage3 → Portage → ядро → система → службы → GRUB → завершение.
+разметка → stage3 → Portage → ядро → система → службы → GRUB
+→ графическое окружение → завершение.
 
 Файл конфигурации: ${GI_CONFIG_FILE}
 Рабочий каталог:   ${GI_WORKDIR}

@@ -22,6 +22,7 @@ config_defaults
 assert_eq "xfs" "$CFG_ROOT_FS"
 assert_eq "xfs" "$CFG_HOME_FS"
 assert_eq "openrc" "$CFG_STAGE_FLAVOR"
+assert_eq "none" "$CFG_DESKTOP"
 config_derived
 assert_eq "openrc" "$CFG_INIT"
 CFG_STAGE_FLAVOR=desktop-systemd
@@ -34,6 +35,36 @@ CFG_PROFILE=gnome
 CFG_STAGE_FLAVOR=desktop-openrc
 config_derived
 assert_eq "gnome" "$CFG_PROFILE" "desktop stage keeps selected profile"
+
+# Desktop environment selection adjusts only a generic profile.
+config_defaults
+CFG_DESKTOP=xfce
+config_derived
+assert_eq "desktop" "$CFG_PROFILE" "XFCE selects the desktop profile"
+CFG_DESKTOP=gnome
+CFG_PROFILE=stage
+config_derived
+assert_eq "gnome" "$CFG_PROFILE" "GNOME selects the GNOME profile"
+CFG_DESKTOP=gnome
+CFG_PROFILE=desktop
+config_derived
+assert_eq "gnome" "$CFG_PROFILE" "GNOME replaces the generic desktop profile"
+CFG_DESKTOP=xfce
+CFG_PROFILE=kde
+config_derived
+assert_eq "kde" "$CFG_PROFILE" "XFCE preserves an explicit KDE profile"
+CFG_DESKTOP=gnome
+CFG_PROFILE=hardened
+config_derived
+assert_eq "hardened" "$CFG_PROFILE" "GNOME preserves an explicit hardened profile"
+CFG_DESKTOP=none
+CFG_PROFILE=gnome
+config_derived
+assert_eq "gnome" "$CFG_PROFILE" "no desktop keeps an explicit GNOME profile"
+
+expected_steps=(disk stage3 portage kernel system tools bootloader desktop finalize)
+assert_eq "${expected_steps[*]}" "${STATE_STEPS[*]}" "state step order includes desktop"
+assert_eq "$GI_STEP_TOTAL" "${#STATE_STEPS[@]}" "step total matches state steps"
 
 # Non-custom swap ignores a stale size but keeps auto-captured device fields.
 config_defaults

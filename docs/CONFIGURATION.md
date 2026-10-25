@@ -109,6 +109,7 @@ DISK=""
 | `MIRROR` | HTTP(S)-URL | `https://distfiles.gentoo.org` | Базовый URL зеркала distfiles. |
 | `STAGE_URL` | HTTP(S)-URL или пусто | пусто | Прямой URL stage3 вместо latest-stage3. |
 | `PROFILE` | `stage`, `desktop`, `gnome`, `kde`, `hardened` | `stage` | Профиль Portage. |
+| `DESKTOP` | `none`, `xfce`, `gnome` | `none` | Графическое окружение; `none` — не устанавливать. |
 | `CPU_FLAGS` | `yes`, `no` | `yes` | Определять `CPU_FLAGS_X86` через `cpuid2cpuflags`. |
 | `UPDATE_WORLD` | `yes`, `no` | `no` | Выполнять `emerge --update --deep --newuse @world`. |
 | `MAKE_JOBS` | `auto` или целое 1–256 | `auto` | Число задач `make`. |
@@ -119,6 +120,26 @@ DISK=""
 При `STAGE_FLAVOR=desktop-*` профиль автоматически становится `desktop`, если
 в файле указан `PROFILE="stage"`. Явно выбранные `gnome`, `kde` или `hardened`
 не перезаписываются.
+
+`DESKTOP` определяет отдельный этап после загрузчика:
+
+- `none` — этап пропускается, сеть для него не нужна;
+- `xfce` — Xorg, XFCE и LightDM; профиль `desktop`, если выбран generic
+  `stage`;
+- `gnome` — Xorg, GNOME и GDM; профиль `gnome`, если выбран `stage` или
+  generic `desktop`. GDM требует `elogind` (OpenRC) или `systemd`, поэтому
+  GNOME-профиль важен.
+
+Явные профили `kde` и `hardened` не перезаписываются. Если сменить `DESKTOP`
+после завершения этапа Portage, пакеты установятся, но профиль уже не будет
+применён к базовой системе; для смены профиля сбросьте состояние.
+
+Для OpenRC установщик включает `dbus`, `elogind` и `display-manager`, а также
+пишет `/etc/conf.d/display-manager`; в `USE` добавляется `elogind`, потому что
+LightDM и GDM требуют ровно один из `elogind`/`systemd` (это важно и для явного
+профиля `hardened`). Для systemd включаются `lightdm.service` или
+`gdm.service` и `graphical.target`. Пользователь добавляется в доступные
+группы `plugdev`, `input`, `render`, `video`, `audio`.
 
 ### Ядро и загрузчик
 
@@ -164,6 +185,9 @@ DISK=""
   `openrc`;
 - профиль `desktop` подставляется для desktop-stage3 только при
   `PROFILE="stage"`;
+- `DESKTOP=xfce` выбирает `desktop`, если профиль был `stage`;
+- `DESKTOP=gnome` выбирает `gnome`, если профиль был `stage` или `desktop`;
+  явные `kde` и `hardened` сохраняются;
 - при `SWAP_MODE != custom` размер `SWAP_MIB` обнуляется;
 - при `HOME_MODE=no` очищаются `PART_HOME`, `UUID_HOME`, а `FORMAT_HOME`
   становится `no`;
@@ -191,6 +215,7 @@ HOME_MODE="no"
 SWAP_MODE="auto"
 STAGE_FLAVOR="openrc"
 PROFILE="stage"
+DESKTOP="xfce"
 KERNEL_MODE="bin"
 BOOTLOADER="grub"
 HOSTNAME="gentoo"
@@ -217,6 +242,7 @@ SWAP_MODE="custom"
 SWAP_MIB="4096"
 STAGE_FLAVOR="systemd"
 PROFILE="desktop"
+DESKTOP="gnome"
 KERNEL_MODE="dist"
 FIRMWARE="yes"
 MICROCODE="auto"
@@ -257,6 +283,7 @@ HOME_MODE="separate"
 - preflight требует `mkfs.xfs`/`mkfs.btrfs`, если выбраны эти ФС;
 - hostname, timezone, locale, keymap, CFLAGS, USE, VIDEO_CARDS и kernel cmdline
   проходят собственные валидаторы;
+- `DESKTOP` — `none`, `xfce` или `gnome`;
 - `MAKE_JOBS` — `auto` или целое 1–256.
 
 Ошибки показываются списком в TUI и дублируются в журнал. После исправления

@@ -114,6 +114,13 @@ validate_bool() {
     esac
 }
 
+validate_desktop() {
+    case "$1" in
+        none|xfce|gnome) return 0 ;;
+        *) fail_validation "Графическое окружение: none, xfce или gnome."; return 1 ;;
+    esac
+}
+
 validate_no_control() {
     local value=$1
     [[ $value != *$'\n'* && $value != *$'\r'* && $value != *'"'* ]] ||
@@ -296,6 +303,8 @@ config_validate() {
         stage|desktop|gnome|kde|hardened) ;;
         *) validation_error "Неизвестный профиль Portage." ;;
     esac
+    validate_desktop "$CFG_DESKTOP" 2>/dev/null ||
+        validation_error "Графическое окружение: ${VALIDATION_MESSAGE:-некорректно}."
 
     case "$CFG_KERNEL_MODE" in
         bin|dist|manual) ;;

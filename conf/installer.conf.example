@@ -72,7 +72,13 @@ MIRROR="https://distfiles.gentoo.org"
 STAGE_URL=""
 
 # stage, desktop, gnome, kde or hardened.
+# XFCE and GNOME adjust generic stage/desktop profiles automatically; explicit
+# kde and hardened profiles are preserved.
 PROFILE="stage"
+
+# none, xfce or gnome. The desktop stage runs after GRUB and before finalization.
+# xfce installs Xorg + XFCE + LightDM; gnome installs Xorg + GNOME + GDM.
+DESKTOP="none"
 
 # Detect CPU_FLAGS_X86 with cpuid2cpuflags during the Portage stage.
 CPU_FLAGS="yes"

@@ -29,8 +29,11 @@ finalize_unmount() {
 }
 
 finalize_message() {
-    local login=$CFG_USERNAME
+    local login=$CFG_USERNAME desktop="не выбрана"
     [[ $CFG_CREATE_USER == yes ]] || login=root
+    if desktop_is_enabled; then
+        desktop="$(desktop_label) ($(desktop_display_manager))"
+    fi
     ui_header "Установка завершена" "Gentoo Linux установлен на ${CFG_DISK}"
     ui_wrap "Система настроена и готова к первой загрузке.
 
@@ -38,6 +41,7 @@ finalize_message() {
   Пользователь:    ${login}
   Загрузчик:       GRUB (${CFG_BOOT_MODE^^})
   Ядро:            ${CFG_KERNEL_MODE}
+  Графика:         ${desktop}
   Часовой пояс:    ${CFG_TIMEZONE}
   Локаль:          ${CFG_LOCALE}
   Сеть:            ${CFG_NETWORK}

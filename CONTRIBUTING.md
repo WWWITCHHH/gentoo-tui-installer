@@ -30,7 +30,7 @@ sudo apt-get install shellcheck     # Debian/Ubuntu
 - Точка входа и тесты используют `set -Eeuo pipefail`. Библиотечные модули не
   меняют глобальные опции shell.
 - Функции имеют префикс области: `disk_`, `stage3_`, `portage_`, `kernel_`,
-  `system_`, `tools_`, `bootloader_`, `finalize_`, `wizard_`, `ui_`.
+  `system_`, `tools_`, `bootloader_`, `desktop_`, `finalize_`, `wizard_`, `ui_`.
 - Глобальные переменные — `GI_`, `CFG_`, `PLAN_`, `STATE_`, `UI_`.
 - Все подстановки переменных — в кавычках: `"$var"`, `"${array[@]}"`.
 - Для команд используйте массивы и `ui_run`/`ui_run_input`, а не `eval` и не
@@ -102,7 +102,7 @@ build: add release archive target
 - [ ] обновлены README/docs/CHANGELOG, если затронуто поведение;
 - [ ] нет паролей и секретов в коде, тестах и логах;
 - [ ] destructive-операции по-прежнему требуют подтверждения;
-- [ ] изменение не ломает BIOS/UEFI и OpenRC/systemd;
+- [ ] изменение не ломает BIOS/UEFI, OpenRC/systemd и оба варианта `DESKTOP`;
 - [ ] для нового оборудования/ядра указано, как проверялось.
 
 В описании PR укажите:

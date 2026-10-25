@@ -59,6 +59,8 @@ source "$GI_SCRIPT_DIR/lib/system.sh"
 source "$GI_SCRIPT_DIR/lib/tools.sh"
 # shellcheck source=lib/bootloader.sh
 source "$GI_SCRIPT_DIR/lib/bootloader.sh"
+# shellcheck source=lib/desktop.sh
+source "$GI_SCRIPT_DIR/lib/desktop.sh"
 # shellcheck source=lib/finalize.sh
 source "$GI_SCRIPT_DIR/lib/finalize.sh"
 # shellcheck source=lib/wizard.sh
