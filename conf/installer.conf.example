@@ -1,0 +1,125 @@
+# Gentoo TUI Installer configuration example.
+# Copy this file, edit the values and load it through the main menu or pass it
+# with --config. Passwords are never stored in this file: root and user
+# passwords are requested interactively during the system stage.
+#
+# All values are double-quoted. Inline comments after the closing quote are
+# allowed. Unknown keys are rejected. SCHEMA must stay "1".
+
+SCHEMA="1"
+
+# ---------------------------------------------------------------------------
+# Boot mode, disk and partitions
+# ---------------------------------------------------------------------------
+
+# uefi: GPT + ESP mounted at /efi (GRUB x86_64-efi)
+# bios: MBR + /boot (GRUB i386-pc)
+BOOT_MODE="uefi"
+
+# auto: create a new partition table and the layout below.
+# manual: use partitions that already exist (fill PART_* below).
+DISK_MODE="auto"
+
+# Whole disk, for example /dev/sda, /dev/nvme0n1 or /dev/vda.
+# Leave empty to select interactively. For manual mode this must be set.
+DISK=""
+
+ROOT_FS="xfs"          # xfs, ext4 or btrfs
+HOME_FS="xfs"          # used only when HOME_MODE="separate"
+SWAP_MODE="auto"       # auto, none or custom
+SWAP_MIB="0"           # used only when SWAP_MODE="custom"
+HOME_MODE="no"         # no or separate
+HOME_MIB="0"           # used only when HOME_MODE="separate" and DISK_MODE="auto"
+
+# Manual layout only. These are partition devices, not whole disks.
+PART_ESP=""
+PART_BOOT=""
+PART_SWAP=""
+PART_ROOT=""
+PART_HOME=""
+
+# Manual layout only: format the selected partition. Set to "no" to keep an
+# existing filesystem (for example an ESP shared with another system).
+FORMAT_ESP="yes"
+FORMAT_BOOT="yes"
+FORMAT_SWAP="yes"
+FORMAT_ROOT="yes"
+FORMAT_HOME="yes"
+
+# Filled in automatically after formatting. Leave empty for auto mode.
+UUID_ESP=""
+UUID_BOOT=""
+UUID_SWAP=""
+UUID_ROOT=""
+UUID_HOME=""
+
+# Filesystem for /boot in BIOS mode.
+BOOT_FS="xfs"
+
+# ---------------------------------------------------------------------------
+# Stage3 and Portage
+# ---------------------------------------------------------------------------
+
+# openrc, systemd, desktop-openrc or desktop-systemd.
+STAGE_FLAVOR="openrc"
+
+# Base URL of a distfiles mirror. The installer appends
+# releases/amd64/autobuilds/... to it.
+MIRROR="https://distfiles.gentoo.org"
+
+# Optional direct URL to a stage3 .tar.xz. If set, MIRROR is not used to
+# resolve the latest stage3.
+STAGE_URL=""
+
+# stage, desktop, gnome, kde or hardened.
+PROFILE="stage"
+
+# Detect CPU_FLAGS_X86 with cpuid2cpuflags during the Portage stage.
+CPU_FLAGS="yes"
+
+# Run emerge --update --deep --newuse @world. This can take a long time.
+UPDATE_WORLD="no"
+
+# Number of parallel make jobs, or "auto" (CPU/RAM based).
+MAKE_JOBS="auto"
+
+CFLAGS="-march=native -O2 -pipe"
+VIDEO_CARDS=""          # e.g. "amdgpu radeonsi" or "intel"
+USE_EXTRA=""            # additional USE flags, space separated
+
+# ---------------------------------------------------------------------------
+# Kernel and bootloader
+# ---------------------------------------------------------------------------
+
+# bin: sys-kernel/gentoo-kernel-bin
+# dist: sys-kernel/gentoo-kernel (distribution configuration, compiled)
+# manual: sys-kernel/gentoo-sources + make menuconfig
+KERNEL_MODE="bin"
+
+FIRMWARE="yes"          # install sys-kernel/linux-firmware
+MICROCODE="auto"        # auto, none, intel or amd
+KERNEL_CMDLINE="quiet"  # root= is added automatically
+BOOTLOADER="grub"       # GRUB is the only supported bootloader
+
+# ---------------------------------------------------------------------------
+# System
+# ---------------------------------------------------------------------------
+
+HOSTNAME="gentoo"
+TIMEZONE="UTC"          # IANA name, e.g. Europe/Moscow
+LOCALE="en_US.UTF-8"
+KEYMAP="us"
+HWCLOCK="UTC"           # UTC or local
+
+# ---------------------------------------------------------------------------
+# Services and accounts
+# ---------------------------------------------------------------------------
+
+NETWORK="dhcpcd"        # dhcpcd, networkmanager or none
+SSH="no"                # install and enable OpenSSH
+CRON="yes"              # install and enable cronie
+CHRONY="yes"            # install and enable chronyd
+SYSLOG="yes"            # sysklogd (OpenRC) or rsyslog (systemd)
+SUDO="yes"              # install sudo and allow the wheel group
+USERNAME="gentoo"
+CREATE_USER="yes"

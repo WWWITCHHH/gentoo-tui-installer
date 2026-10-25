@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Gentoo TUI Installer entry point.
+# This file is meant to be executed from a Gentoo Minimal Installation CD.
+
+set -Eeuo pipefail
+
+if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
+    printf 'Ошибка: требуется Bash 4.4 или новее.\n' >&2
+    exit 1
+fi
+
+GI_SCRIPT_DIR=$(cd -- "$(dirname -- "$(readlink -f -- "${BASH_SOURCE[0]}")")" && pwd -P)
+readonly GI_SCRIPT_DIR
+
+if [[ -f "$GI_SCRIPT_DIR/VERSION" ]]; then
+    GI_VERSION=$(<"$GI_SCRIPT_DIR/VERSION")
+else
+    GI_VERSION="unknown"
+fi
+
+GI_GIT_VERSION=""
+if command -v git >/dev/null 2>&1 && git -C "$GI_SCRIPT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+    GI_GIT_VERSION=$(git -C "$GI_SCRIPT_DIR" describe --tags --always --dirty 2>/dev/null || true)
+fi
+readonly GI_VERSION GI_GIT_VERSION
+
+# The TUI uses Unicode box drawing and Cyrillic labels. Prefer a UTF-8 locale,
+# while leaving the user's locale untouched if none is available.
+if locale -a 2>/dev/null | grep -qiE '^C\.utf-?8$'; then
+    export LC_ALL=C.UTF-8
+elif locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
+    export LC_ALL=en_US.UTF-8
+fi
+
+export TERM="${TERM:-linux}"
+umask 022
+
+# shellcheck source=lib/core.sh
+source "$GI_SCRIPT_DIR/lib/core.sh"
+# shellcheck source=lib/validate.sh
+source "$GI_SCRIPT_DIR/lib/validate.sh"
+# shellcheck source=lib/ui.sh
+source "$GI_SCRIPT_DIR/lib/ui.sh"
+# shellcheck source=lib/ui-run.sh
+source "$GI_SCRIPT_DIR/lib/ui-run.sh"
+# shellcheck source=lib/preflight.sh
+source "$GI_SCRIPT_DIR/lib/preflight.sh"
+# shellcheck source=lib/disks.sh
+source "$GI_SCRIPT_DIR/lib/disks.sh"
+# shellcheck source=lib/stage3.sh
+source "$GI_SCRIPT_DIR/lib/stage3.sh"
+# shellcheck source=lib/portage.sh
+source "$GI_SCRIPT_DIR/lib/portage.sh"
+# shellcheck source=lib/kernel.sh
+source "$GI_SCRIPT_DIR/lib/kernel.sh"
+# shellcheck source=lib/system.sh
+source "$GI_SCRIPT_DIR/lib/system.sh"
+# shellcheck source=lib/tools.sh
+source "$GI_SCRIPT_DIR/lib/tools.sh"
+# shellcheck source=lib/bootloader.sh
+source "$GI_SCRIPT_DIR/lib/bootloader.sh"
+# shellcheck source=lib/finalize.sh
+source "$GI_SCRIPT_DIR/lib/finalize.sh"
+# shellcheck source=lib/wizard.sh
+source "$GI_SCRIPT_DIR/lib/wizard.sh"
+# shellcheck source=lib/main.sh
+source "$GI_SCRIPT_DIR/lib/main.sh"
+
+main "$@"
