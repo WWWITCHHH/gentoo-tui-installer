@@ -2,9 +2,9 @@
 # Cleanup, unmounting and the final message.
 
 finalize_depclean() {
-    chroot_run "Удаление ненужных зависимостей (depclean)" \
+    chroot_run "$(T 'Removing unnecessary dependencies (depclean)')" \
         emerge --ask=n --quiet --depclean || return 1
-    chroot_run "Обновление окружения" env-update || true
+    chroot_run "$(T 'Updating the environment')" env-update || true
     log_info "depclean finished"
 }
 
@@ -21,37 +21,24 @@ finalize_remove_artifacts() {
 finalize_unmount() {
     chroot_unmount
     if ! disks_unmount_all; then
-        ui_error "Не удалось размонтировать" \
-            "Проверьте, не используются ли файлы в ${GI_ROOT} (например, открыт shell в chroot)."
+        ui_error "$(T 'Failed to unmount')" \
+            "$(T 'Check whether files in %s are still in use (for example, an open shell in the chroot).' "$GI_ROOT")"
         return 1
     fi
     log_info "all target filesystems unmounted"
 }
 
 finalize_message() {
-    local login=$CFG_USERNAME desktop="не выбрана"
+    local login=$CFG_USERNAME desktop
+    desktop=$(T 'not selected')
     [[ $CFG_CREATE_USER == yes ]] || login=root
     if desktop_is_enabled; then
         desktop="$(desktop_label) ($(desktop_display_manager))"
     fi
-    ui_header "Установка завершена" "Gentoo Linux установлен на ${CFG_DISK}"
-    ui_wrap "Система настроена и готова к первой загрузке.
-
-  Имя хоста:       ${CFG_HOSTNAME}
-  Пользователь:    ${login}
-  Загрузчик:       GRUB (${CFG_BOOT_MODE^^})
-  Ядро:            ${CFG_KERNEL_MODE}
-  Графика:         ${desktop}
-  Часовой пояс:    ${CFG_TIMEZONE}
-  Локаль:          ${CFG_LOCALE}
-  Сеть:            ${CFG_NETWORK}
-
-Журналы установки: ${GI_LOG_DIR}
-Конфигурация:      ${GI_CONFIG_FILE}
-
-Извлеките установочный носитель и перезагрузитесь командой reboot.
-При первом входе смените пароли, если это необходимо."
-    ui_footer "Enter — закрыть"
+    ui_header "$(T 'Installation complete')" "$(T 'Gentoo Linux is installed on %s' "$CFG_DISK")"
+    ui_wrap "$(T 'The system is configured and ready for its first boot.\n\n  Hostname:        %s\n  User:            %s\n  Bootloader:      GRUB (%s)\n  Kernel:          %s\n  Desktop:         %s\n  Timezone:        %s\n  Locale:          %s\n  Network:         %s\n\nInstallation logs: %s\nConfiguration:     %s\n\nRemove the installation media and reboot.\nChange the passwords after the first login if necessary.' \
+        "$CFG_HOSTNAME" "$login" "${CFG_BOOT_MODE^^}" "$CFG_KERNEL_MODE" "$desktop" "$CFG_TIMEZONE" "$CFG_LOCALE" "$CFG_NETWORK" "$GI_LOG_DIR" "$GI_CONFIG_FILE")"
+    ui_footer "$(T 'Enter - close')"
     ui_read_key || true
 }
 

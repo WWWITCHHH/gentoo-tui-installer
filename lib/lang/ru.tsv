@@ -1,0 +1,781 @@
+# Russian UI catalogue for gentoo-tui-installer.
+# Format: English<TAB>Russian. Use \n for a newline and \\ for a backslash.
+# English is the source language; missing entries fall back to English.
+Installing GRUB	Установка GRUB
+ESP is not mounted	ESP не смонтирован
+Expected mount point %s/efi.	Ожидалась точка монтирования %s/efi.
+Installing GRUB into the ESP	Установка GRUB в ESP
+No target disk	Целевой диск не указан
+Installing GRUB into the MBR requires %s.	Для установки GRUB в MBR требуется %s.
+/boot is not mounted	/boot не смонтирован
+Expected mount point %s/boot.	Ожидалась точка монтирования %s/boot.
+Installing GRUB into the MBR of %s	Установка GRUB в MBR диска %s
+Generating grub.cfg	Генерация grub.cfg
+grub.cfg was not created	grub.cfg не создан
+%s is missing or empty.	%s отсутствует или пуст.
+grub.cfg has no boot entries	В grub.cfg нет пунктов загрузки
+grub-mkconfig did not find a kernel. Check /boot and the kernel step.	grub-mkconfig не нашёл ядро. Проверьте /boot и этап установки ядра.
+grub.cfg has no root=	В grub.cfg нет root=
+GRUB could not determine the root device. Check fstab and the root UUID.	GRUB не смог определить корневое устройство. Проверьте fstab и UUID корня.
+GRUB EFI was not found	GRUB EFI не найден
+There is no grubx64.efi in %s/efi/EFI/Gentoo.	В %s/efi/EFI/Gentoo нет grubx64.efi.
+No fstab	Нет fstab
+Run the system configuration step first.	Сначала выполните этап настройки системы.
+Error: %s	Ошибка: %s
+Log: %s	Журнал: %s
+Warning: %s	Внимание: %s
+mount point is not mounted: %s	точка монтирования не смонтирована: %s
+the installer must run as root (log in to the Minimal CD as root)	установщик должен запускаться от root (войдите в Minimal CD как root)
+another installer instance is already running (%s)	другой экземпляр установщика уже работает (%s)
+the value of %s contains a newline and cannot be saved	значение %s содержит перевод строки и не может быть сохранено
+configuration file not found: %s	файл конфигурации не найден: %s
+invalid configuration line: %s	некорректная строка конфигурации: %s
+unknown or unsafe configuration key: %s	неизвестный или небезопасный ключ конфигурации: %s
+unsupported configuration version: %s	неподдерживаемая версия конфигурации: %s
+Disk partitioning	Разметка диска
+Stage3 and Portage	Stage3 и Portage
+Chroot and Portage setup	Chroot и настройка Portage
+Linux kernel	Ядро Linux
+System configuration	Настройка системы
+System services	Системные службы
+GRUB bootloader	Загрузчик GRUB
+Desktop environment	Графическое окружение
+Finishing up	Завершение
+command failed: %s	команда завершилась с ошибкой: %s
+no desktop environment	без графической среды
+Enabling %s.service	Включение службы %s.service
+Setting the systemd graphical target	Установка графической цели systemd
+Enabling display-manager	Включение display-manager
+Enabling service %s	Включение службы %s
+Display manager service not found	Служба дисплей-менеджера не найдена
+Expected %s/etc/init.d/display-manager or %s/etc/init.d/%s.\\nCheck the gui-libs/display-manager-init installation.	Ожидался %s/etc/init.d/display-manager или %s/etc/init.d/%s.\nПроверьте установку gui-libs/display-manager-init.
+Adding %s to desktop groups	Добавление %s в группы графической среды
+Xorg and %s will be installed.	Будут установлены Xorg и %s.
+XFCE uses LightDM as its display manager.	XFCE использует LightDM в качестве дисплей-менеджера.
+GNOME uses GDM and requires a lot of space; installation may take several hours.	GNOME использует GDM и требует много места; установка может занять несколько часов.
+Make sure CFLAGS contains no unsuitable optimizations and VIDEO_CARDS lists\\nyour GPU drivers: with empty VIDEO_CARDS, Xorg may run without acceleration.	Убедитесь, что в CFLAGS нет неподходящих оптимизаций, а в VIDEO_CARDS перечислены\nдрайверы GPU: при пустом VIDEO_CARDS Xorg может работать без ускорения.
+Desktop environment: %s	Графическое окружение: %s
+Enter - install the desktop environment	Enter — установить графическое окружение
+Installing %s	Установка %s
+Xorg is not installed	Xorg не установлен
+There is no Xorg in %s/usr/bin. Check the Xorg installation log.	В %s/usr/bin нет Xorg. Проверьте журнал установки Xorg.
+The %s session is not installed	Сеанс %s не установлен
+%s was not found. Check the desktop installation log.	%s не найден. Проверьте журнал установки графической среды.
+Display manager is not installed	Дисплей-менеджер не установлен
+%s was not found in %s/usr/sbin or %s/usr/bin.	%s не найден в %s/usr/sbin или %s/usr/bin.
+Display manager service is not installed	Служба дисплей-менеджера не установлена
+The display-manager or %s init script was not found.	Не найден init-скрипт display-manager или %s.
+No base system	Нет базовой системы
+Run the Stage3 and Portage steps first.	Сначала выполните этапы Stage3 и Portage.
+Partition size for %s must be greater than zero.	Размер раздела %s должен быть больше нуля.
+Partition %s does not fit on the disk.	Раздел %s не помещается на диск.
+unable to determine disk size	не удалось определить размер диска
+Disk is too small (%s MiB).	Диск слишком мал (%s MiB).
+BIOS + MBR does not support disks larger than 2 TiB.	BIOS + MBR не поддерживает диски больше 2 TiB.
+unknown swap mode	неизвестный режим swap
+/home size must be greater than zero.	Размер /home должен быть больше нуля.
+unknown boot mode	неизвестный режим загрузки
+Root would be smaller than %s MiB; reduce swap or /home.	Корневой раздел станет меньше %s MiB; уменьшите swap или /home.
+Root would be smaller than %s MiB; reduce swap.	Корневой раздел станет меньше %s MiB; уменьшите swap.
+Scheme: %s	Схема: %s
+Disk:  %s (%s, %s)	Диск: %s (%s, %s)
+Changes will destroy ALL data on %s.	Изменения уничтожат ВСЕ данные на %s.
+Partition plan	План разметки
+Partition	Раздел
+Role	Роль
+FS	ФС
+Size	Размер
+Mount point	Точка монтирования
+size unknown	размер неизвестен
+removable	съёмный
+Target disk	Целевой диск
+All partitions and signatures on the selected disk will be destroyed	Все разделы и подписи на выбранном диске будут уничтожены
+Invalid disk	Некорректный диск
+Disk is already in use	Диск уже используется
+Mounted partitions exist on %s. Unmount them before installing.	На %s есть смонтированные разделы. Размонтируйте их перед установкой.
+Active swap	Активный swap
+Disable swap on %s: swapoff -a	Отключите swap на %s: swapoff -a
+Type ERASE in uppercase to confirm.	Введите ERASE заглавными буквами для подтверждения.
+Final warning	Последнее предупреждение
+Data on the disk will be destroyed permanently	Данные на диске будут безвозвратно уничтожены
+Confirmation	Подтверждение
+Type ERASE to start partitioning and formatting:	Введите ERASE, чтобы начать разметку и форматирование:
+This action cannot be undone	Это действие необратимо
+Wiping signatures: %s	Стирание подписей: %s
+unknown filesystem: %s	неизвестная файловая система: %s
+Creating %s partition table	Создание таблицы %s
+Partition %s: %s	Раздел %s: %s
+ESP flag	Флаг ESP
+boot flag	Флаг boot
+Reloading the partition table	Обновление таблицы разделов
+Waiting for udev	Ожидание udev
+the kernel did not detect the created partition %s	ядро не обнаружило созданный раздел %s
+unable to determine the size of %s	не удалось определить размер %s
+partition plan: %s	план разметки: %s
+no filesystem	нет файловой системы
+The filesystem will be created from scratch	Файловая система будет создана заново
+Reliable default filesystem, recommended for Gentoo	Надёжная ФС по умолчанию, рекомендуется для Gentoo
+Classic and predictable filesystem	Классическая и предсказуемая ФС
+Snapshots and compression; subvolumes are not configured	Снапшоты и сжатие; subvolumes не настраиваются
+No partitions found	Разделы не найдены
+Create partitions on %s and try again.	Создайте разделы на %s и повторите выбор.
+Do not use	Не использовать
+No separate partition	Без отдельного раздела
+Choose a partition for the %s role	Выберите раздел для роли %s
+Partition already in use	Раздел уже используется
+One partition cannot be assigned to two roles.	Один раздел нельзя назначить двум ролям.
+Manual partitioning	Ручная разметка
+Open cfdisk for %s?\\n\\nCreate the partitions first. After exiting, assign them to roles.\\nUEFI: an ESP (vfat) is required. BIOS: /boot (ext4/xfs/btrfs) is required.	Открыть cfdisk для %s?\n\nСоздайте разделы заранее. После выхода назначьте их ролям.\nUEFI: нужен ESP (vfat). BIOS: нужен /boot (ext4/xfs/btrfs).
+cfdisk %s	cfdisk %s
+Root partition	Корневой раздел
+EFI System Partition	Системный раздел EFI (ESP)
+/boot partition	Раздел /boot
+Swap (optional)	Swap (необязательно)
+Separate /home	Отдельный /home
+Create a separate /home partition?	Создать отдельный раздел /home?
+/home partition	Раздел /home
+Different disks	Разные диски
+All selected partitions must be on the same disk.	Все выбранные разделы должны находиться на одном диске.
+Could not determine the disk	Не удалось определить диск
+The partitions are not associated with a whole disk.	Разделы не связаны с целым диском.
+GPT required	Нужна GPT
+The UEFI layout requires GPT (found: %s).	Схема UEFI требует GPT (найдено: %s).
+none	нет
+MBR required	Нужна MBR
+The BIOS layout requires MBR/DOS (found: %s).	Схема BIOS требует MBR/DOS (найдено: %s).
+Partitions and filesystems	Разделы и файловые системы
+Formatting destroys data on the selected partitions	Форматирование уничтожает данные на выбранных разделах
+Root filesystem	Файловая система root
+Format the ESP?	Форматировать ESP?
+Reformat %s as FAT32? For dual boot the answer is usually NO.	Переформатировать %s в FAT32? Для dual boot обычно НЕТ.
+ESP is not vfat	ESP не vfat
+Partition %s must contain FAT32 (found: %s).	Раздел %s должен содержать FAT32 (найдено: %s).
+Format /boot?	Форматировать /boot?
+Reformat %s?	Переформатировать %s?
+/boot filesystem	Файловая система /boot
+Invalid /boot	Некорректный /boot
+Filesystem on %s: %s.	Файловая система на %s: %s.
+Format swap?	Форматировать swap?
+Run mkswap on %s?	Выполнить mkswap для %s?
+Not swap	Это не swap
+Partition %s does not contain a swap signature (found: %s).	Раздел %s не содержит подпись swap (найдено: %s).
+Format /home?	Форматировать /home?
+Formatting %s will destroy its data.	Форматирование %s уничтожит данные.
+/home filesystem	Файловая система /home
+Invalid /home	Некорректный /home
+No root partition	Нет корневого раздела
+The root partition was not found.	Корневой раздел не найден.
+No ESP	Нет ESP
+The EFI System Partition was not found.	Системный раздел EFI (ESP) не найден.
+No /boot partition	Нет раздела /boot
+The /boot partition was not found.	Раздел /boot не найден.
+No swap partition	Нет раздела swap
+The swap partition was not found.	Раздел swap не найден.
+No /home partition	Нет раздела /home
+The /home partition was not found.	Раздел /home не найден.
+Check the manual layout	Проверка ручной схемы
+The selected partitions will be formatted	Будут отформатированы выбранные разделы
+The changes will destroy data on the partitions being formatted.	Изменения уничтожат данные на форматируемых разделах.
+Enter - confirm · Esc - cancel	Enter — подтвердить · Esc — отмена
+Type ERASE to format the selected partitions:	Введите ERASE для форматирования выбранных разделов:
+Data on the selected partitions will be destroyed	Данные на выбранных разделах будут уничтожены
+failed to read the UUID of ESP %s	не удалось получить UUID для ESP %s
+failed to read the UUID of /boot %s	не удалось получить UUID для /boot %s
+failed to read the UUID of swap %s	не удалось получить UUID для swap %s
+failed to read the UUID of root %s	не удалось получить UUID для root %s
+failed to read the UUID of /home %s	не удалось получить UUID для /home %s
+Mount point busy	Точка занята
+%s already contains a different filesystem (%s).	%s уже содержит другую файловую систему (%s).
+Mounting %s	Монтирование %s
+root UUID is not set	UUID root не определён
+Wrong root	Неверный root
+%s is already occupied by %s.	%s уже занят %s.
+ESP UUID is not set	UUID ESP не определён
+/boot UUID is not set	UUID /boot не определён
+Activating swap	Активация swap
+Not enough space	Мало места
+Only %s MiB are available on the root partition. At least 6 GiB are required.	На корневом разделе доступно %s MiB. Нужно минимум 6 GiB.
+Repartitioning	Повторная разметка
+The target system is already mounted. The installer will unmount it before repartitioning.	Целевая система уже смонтирована. Установщик размонтирует её перед повторной разметкой.
+Check the sizes and mount points	Проверьте размеры и точки монтирования
+Enter - continue to confirmation	Enter — перейти к подтверждению
+Removing unnecessary dependencies (depclean)	Удаление ненужных зависимостей (depclean)
+Updating the environment	Обновление окружения
+Failed to unmount	Не удалось размонтировать
+Check whether files in %s are still in use (for example, an open shell in the chroot).	Проверьте, не используются ли файлы в %s (например, открыт shell в chroot).
+not selected	не выбран
+Installation complete	Установка завершена
+Gentoo Linux is installed on %s	Gentoo Linux установлен на %s
+The system is configured and ready for its first boot.\\n\\n  Hostname:        %s\\n  User:            %s\\n  Bootloader:      GRUB (%s)\\n  Kernel:          %s\\n  Desktop:         %s\\n  Timezone:        %s\\n  Locale:          %s\\n  Network:         %s\\n\\nInstallation logs: %s\\nConfiguration:     %s\\n\\nRemove the installation media and reboot.\\nChange the passwords after the first login if necessary.	Система настроена и готова к первой загрузке.\n\n  Имя хоста:       %s\n  Пользователь:    %s\n  Загрузчик:       GRUB (%s)\n  Ядро:            %s\n  Графика:         %s\n  Часовой пояс:    %s\n  Локаль:          %s\n  Сеть:            %s\n\nЖурналы установки: %s\nКонфигурация:      %s\n\nИзвлеките установочный носитель и перезагрузитесь командой reboot.\nПри первом входе смените пароли, если это необходимо.
+Enter - close	Enter — закрыть
+Installing installkernel and dracut	Установка installkernel и dracut
+Device firmware	Прошивки устройств
+The sys-kernel/linux-firmware package contains firmware for Wi-Fi, GPUs and other devices.\\nIt is hundreds of megabytes and installation may take a while.	Пакет sys-kernel/linux-firmware содержит прошивки для Wi-Fi, GPU и других устройств.\nОн занимает сотни мегабайт. Установка может занять время.
+Enter - install · Esc - skip	Enter — установить · Esc — пропустить
+linux-firmware installation was skipped by the user	установка linux-firmware пропущена пользователем
+Installing linux-firmware	Установка linux-firmware
+unknown microcode mode: %s	неизвестный режим микрокода: %s
+Installing microcode (%s)	Установка микрокода (%s)
+Kernel is not installed	Ядро не установлено
+Neither vmlinuz-* nor kernel-* was found in %s/boot.	В %s/boot не найдено ни vmlinuz-*, ни kernel-*.
+initramfs not found; trying to generate one with dracut	initramfs не найден; пробую сгенерировать через dracut
+No kernel modules	Нет модулей ядра
+The directory %s/lib/modules is empty.	Каталог %s/lib/modules пуст.
+Generating initramfs for %s	Генерация initramfs для %s
+initramfs was not created	initramfs не создан
+dracut exited successfully, but no initramfs file was found.	dracut завершился без ошибки, но файл initramfs не найден.
+Installing gentoo-kernel-bin	Установка gentoo-kernel-bin
+Building the kernel	Сборка ядра
+sys-kernel/gentoo-kernel will be built with the Gentoo configuration.\\nThe build can take from a few minutes to an hour.	sys-kernel/gentoo-kernel будет собран с конфигурацией Gentoo.\nСборка может занять от нескольких минут до часа.
+Enter - start the build	Enter — начать сборку
+Building gentoo-kernel	Сборка gentoo-kernel
+Installing kernel build dependencies	Установка зависимостей сборки ядра
+Installing kernel sources	Установка исходников ядра
+Selecting kernel sources	Выбор исходников ядра
+Kernel configuration	Конфигурация ядра
+make menuconfig will open now. Enable drivers for your hardware.\\nSave the configuration and exit menuconfig to continue.	Сейчас откроется make menuconfig. Включите драйверы для своего оборудования.\nСохраните конфигурацию и выйдите из menuconfig, чтобы продолжить.
+Enter - open menuconfig · Esc - cancel	Enter — открыть menuconfig · Esc — отмена
+make -j%s, then modules_install and install.\\nThis is the longest installation step.	make -j%s, затем modules_install и install.\nЭто самый длительный этап установки.
+Building and installing the kernel	Сборка и установка ядра
+unknown kernel mode: %s	неизвестный режим ядра: %s
+option %s requires a file path	параметр %s требует путь к файлу
+option %s requires a language (en or ru)	параметр %s требует язык (en или ru)
+unsupported language: %s (use en or ru)	неподдерживаемый язык: %s (используйте en или ru)
+unknown option: %s (see --help)	неизвестный параметр: %s (см. --help)
+--resume requires a saved configuration file: %s	--resume требует сохранённый файл конфигурации: %s
+Create partitions and filesystems, then mount the target system.	Создание разделов и файловых систем, затем монтирование целевой системы.
+Download, verify and extract Stage3, then install Portage.	Загрузка, проверка и распаковка Stage3, затем установка Portage.
+Copy resolv.conf, enter the chroot, write make.conf, sync and select a profile.	Копирование resolv.conf, вход в chroot, запись make.conf, синхронизация и выбор профиля.
+Firmware, microcode and kernel: gentoo-kernel-bin, gentoo-kernel or gentoo-sources.	Прошивки, микрокод и ядро: gentoo-kernel-bin, gentoo-kernel или gentoo-sources.
+Hostname, time, locale, keymap, fstab, root password and user account.	Имя хоста, время, локаль, раскладка, fstab, пароль root и учётная запись пользователя.
+Network, SSH, cron, chrony, system logging, sudo and gentoolkit.	Сеть, SSH, cron, chrony, системный журнал, sudo и gentoolkit.
+Install GRUB into the ESP or MBR and generate grub.cfg.	Установка GRUB в ESP или MBR и генерация grub.cfg.
+Xorg, XFCE + LightDM or GNOME + GDM; skipped when DESKTOP=none.	Xorg, XFCE + LightDM или GNOME + GDM; пропускается при DESKTOP=none.
+depclean, remove temporary files and unmount everything.	depclean, удаление временных файлов и размонтирование.
+Git: %s	Git: %s
+unavailable	недоступно
+The installer guides you through the Gentoo Handbook stages:\\npartitioning -> Stage3 -> Portage -> kernel -> system -> services -> GRUB\\n-> desktop environment -> finish.	Установщик проводит вас через этапы Gentoo Handbook:\nразметка -> Stage3 -> Portage -> ядро -> система -> службы -> GRUB\n-> графическое окружение -> завершение.
+Configuration file: %s\\nWorking directory:   %s\\nLog:                 %s	Файл конфигурации: %s\nРабочий каталог:    %s\nЖурнал:             %s
+Saved state found. Completed steps will be skipped.	Найдено сохранённое состояние. Завершённые этапы будут пропущены.
+Enter - open the menu	Enter — открыть меню
+Installation already complete	Установка уже завершена
+The state of the last installation is saved. To start over, choose\\n"Reset state" in the main menu.	Состояние последней установки сохранено. Чтобы начать заново, выберите\n"Сбросить состояние" в главном меню.
+Unfinished installation	Незавершённая установка
+Completed steps were found. Continue the installation from where it stopped?	Найдены завершённые этапы. Продолжить установку с места остановки?
+failed to unmount partitions	не удалось размонтировать разделы
+Starting over	Начинаем заново
+State has been reset. Configuration values are preserved.	Состояние сброшено. Значения конфигурации сохранены.
+Check the installation settings	Проверьте параметры установки
+Reset the state to install the system again.	Сбросьте состояние, чтобы установить систему заново.
+Environment check failed	Проверка окружения не пройдена
+Fix the problems marked in red and try again.	Исправьте проблемы, отмеченные красным, и повторите попытку.
+Assign partitions for root, ESP/boot, swap and /home.	Назначьте разделы для root, ESP/boot, swap и /home.
+Restoring mounts	Восстановление монтирования
+The target system is already partitioned. Checking and mounting the partitions.	Целевая система уже размечена. Проверка и монтирование разделов.
+Failed to mount	Не удалось смонтировать
+Check the disk connection and partition settings.	Проверьте подключение диска и настройки разделов.
+Step not completed	Этап не завершён
+The step "%s" did not complete. Fix the problem and choose\\n"Start / continue installation"; completed steps will be skipped.	Этап "%s" не завершён. Исправьте проблему и выберите\n"Начать / продолжить установку"; завершённые этапы будут пропущены.
+Installer interrupted. State is saved; run it again to continue.	Установщик прерван. Состояние сохранено; запустите его снова, чтобы продолжить.
+the installer needs an interactive terminal (stdin and stdout)	установщику нужен интерактивный терминал (stdin и stdout)
+Unknown UI language "%s"; using English.	Неизвестный язык интерфейса "%s"; используется английский.
+Installation is already complete. Reset the state to install again.	Установка уже завершена. Сбросьте состояние, чтобы установить заново.
+Installation log: %s	Журнал установки: %s
+Installation complete. Reboot and remove the installation media.	Установка завершена. Перезагрузитесь и извлеките установочный носитель.
+To continue, run: %s --resume	Для продолжения выполните: %s --resume
+Mounting /proc	Монтирование /proc
+Mounting /sys	Монтирование /sys
+Configuring /sys	Настройка /sys
+Mounting /dev	Монтирование /dev
+Configuring /dev	Настройка /dev
+Mounting /run	Монтирование /run
+Configuring /run	Настройка /run
+failed to copy /etc/resolv.conf into the chroot	не удалось скопировать /etc/resolv.conf в chroot
+/etc/resolv.conf is missing: networking inside the chroot may not work	/etc/resolv.conf отсутствует: сеть внутри chroot может не работать
+Initial Portage sync (emerge-webrsync)	Первичная синхронизация Portage (emerge-webrsync)
+Installing cpuid2cpuflags	Установка cpuid2cpuflags
+cpuid2cpuflags returned no CPU_FLAGS_X86; continuing without CPU-specific flags	cpuid2cpuflags не вернул CPU_FLAGS_X86; продолжаю без оптимизации CPU_FLAGS
+eselect profile list returned nothing; the profile was not changed	eselect profile list не вернул список профилей; профиль не изменён
+no matching profile (%s, %s) was found; keeping %s	подходящий профиль (%s, %s) не найден; остаётся %s
+the current profile	текущий профиль
+Selecting the Portage profile	Выбор профиля Portage
+Updating @world	Обновление @world
+This can take from tens of minutes to several hours. Do not power off.	Это может занять от десятков минут до нескольких часов. Не выключайте питание.
+Enter - start the update · Esc - skip	Enter — начать обновление · Esc — пропустить
+Stage3 is not installed	Stage3 не установлен
+There is no /etc/os-release in %s. Run the Stage3 step first.	В %s нет /etc/os-release. Сначала выполните этап Stage3.
+Missing required commands: %s	Нет обязательных команд: %s
+The system clock is wrong (%s); synchronize the time	Системные часы установлены неверно (%s); синхронизируйте время
+The system clock looks suspicious (%s)	Системные часы выглядят подозрительно (%s)
+System date: %s	Системная дата: %s
+Disks found: %s; no target disk has been selected yet	Найдено дисков: %s; целевой диск ещё не выбран
+Disks found: %s; selected %s	Найдено дисков: %s; выбран %s
+The saved disk %s was not found; select a disk in the settings	Сохранённый диск %s не найден; выберите диск в параметрах
+Working directory: %s	Рабочий каталог: %s
+Working directory is not writable: %s	Рабочий каталог недоступен для записи: %s
+The target disk %s looks removable. Make sure it is not the installation media	Целевой диск %s выглядит съёмным. Убедитесь, что это не установочный носитель
+This installer CREATES AND DELETES PARTITIONS AND FILESYSTEMS.\\n\\nA data backup is mandatory. The installer does not support\\nencryption, LVM, RAID or automatic dual-boot configuration.\\n\\nSupported Gentoo Handbook scenarios:\\n  • UEFI + GPT, GRUB bootloader (ESP at /efi)\\n  • BIOS + MBR, GRUB bootloader (/boot)\\n\\nSteps: check -> disk -> Stage3 -> Portage -> kernel -> system\\n-> services -> bootloader -> desktop environment -> finish.\\n\\nContinue only if you understand the consequences.	Этот установщик СОЗДАЁТ И УДАЛЯЕТ РАЗДЕЛЫ И ФАЙЛОВЫЕ СИСТЕМЫ.\n\nРезервная копия данных обязательна. Установщик не поддерживает\nшифрование, LVM, RAID и автоматическую настройку dual boot.\n\nПоддерживаются сценарии Gentoo Handbook:\n  • UEFI + GPT, загрузчик GRUB (ESP в /efi)\n  • BIOS + MBR, загрузчик GRUB (/boot)\n\nЭтапы: проверка -> диск -> Stage3 -> Portage -> ядро -> система\n-> службы -> загрузчик -> графическое окружение -> завершение.\n\nПродолжайте только если понимаете последствия.
+Latest Stage3 list	Список последних Stage3
+Invalid Stage3 list	Некорректный список Stage3
+Could not find an archive path in %s. Check the mirror and the Stage3 variant.	Не удалось найти путь к архиву в %s. Проверьте зеркало и вариант Stage3.
+SHA256 checksum	Контрольная сумма SHA256
+GPG signature	Подпись GPG
+neither SHA256 nor a GPG signature is available for Stage3; installation is unsafe	для Stage3 недоступны ни SHA256, ни GPG-подпись; установка небезопасна
+SHA256 verification	Проверка SHA256
+No checksum was found in %s.	В файле %s не найдена контрольная сумма.
+Integrity check	Проверка целостности
+Computing SHA256 for %s	Вычисление SHA256 для %s
+Expected:	Ожидается:
+SHA256 verification failed	Проверка SHA256 не пройдена
+Expected: %s\\nGot:      %s\\nThe archive is corrupted or was replaced. Installation stopped.\\nThe damaged file has been removed and will be downloaded again.	Ожидалось: %s\nПолучено:  %s\nАрхив повреждён или подменён. Установка остановлена.\nПовреждённый файл удалён; при повторе он будет загружен заново.
+Got:	Получено:
+Enter - continue	Enter — продолжить
+GPG is unavailable and no SHA256 checksum exists for Stage3	GPG недоступен, а SHA256 для Stage3 отсутствует
+the Gentoo key was not found and no SHA256 checksum exists for Stage3	ключ Gentoo не найден, а SHA256 для Stage3 отсутствует
+Verifying the Stage3 signature	Проверка подписи Stage3
+the Gentoo release key was not found: the GPG signature was not checked, only SHA256 is used	ключ релизов Gentoo не найден: GPG-подпись не проверена, используется только SHA256
+GPG unavailable	GPG недоступен
+The Gentoo release key was not found on the Minimal CD.\\nOnly the SHA256 checksum will be verified.	Ключ релизов Gentoo не найден в Minimal CD.\nБудет проверена только контрольная сумма SHA256.
+Extracting Stage3 to %s	Распаковка Stage3 в %s
+Syncing Stage3 writes	Синхронизация записи Stage3
+Timezone not found	Часовой пояс не найден
+%s is missing from Stage3.	В Stage3 нет %s.
+failed to write the time to the RTC; installation will continue	не удалось записать время в RTC; установка продолжится
+Generating locale %s	Генерация локали %s
+Root password	Пароль root
+Setting the root password	Установка пароля root
+Creating user %s	Создание пользователя %s
+Adding %s to groups	Добавление %s в группы
+Password for user %s	Пароль пользователя %s
+Setting the password for %s	Установка пароля %s
+Final environment update	Финальное обновление окружения
+Checking sudoers	Проверка sudoers
+Installing system services and utilities	Установка системных служб и утилит
+Error	Ошибка
+Command exited with code %s	Команда завершилась с кодом %s
+Last log lines:	Последние строки журнала:
+R - retry · L - full log · A/Esc - abort	R — повторить · L — полный журнал · A/Esc — прервать
+Running	Выполняется
+Preparing…	Подготовка…
+Do not power off. Full log:	Не выключайте питание. Полный журнал:
+Interactive command failed	Интерактивная команда завершилась с ошибкой
+%s\\nExit code: %s\\nLog: %s	%s\nКод возврата: %s\nЖурнал: %s
+Downloading: %s	Загрузка: %s
+Downloading	Загрузка
+%s of %s · %s/s	%s из %s · %s/s
+Downloaded:	Скачано:
+File:	Файл:
+<Select>	<Select>
+<Exit>	<Exit>
+<Save>	<Save>
+<Help>	<Help>
+Current configuration	Текущая конфигурация
+Showing %d–%d of %d	Показано %d–%d из %d
+Yes	Да
+Confirm the action	Подтвердить действие
+No	Нет
+Return without changes	Вернуться без изменений
+Integer from %d to %d	Целое число от %d до %d
+Enter an integer from %d to %d.	Введите целое число от %d до %d.
+Step %d of %d: %s	Этап %d из %d: %s
+Timezone not found in zoneinfo: %s	Часовой пояс не найден в zoneinfo: %s
+Allowed range: %s..%s.	Допустимый диапазон: %s..%s.
+Device not found: %s	Устройство не найдено: %s
+Not a whole disk: %s	Это не целый диск: %s
+Not enough space for the selected layout: %s.	Недостаточно места для выбранной схемы: %s.
+Partition %s is assigned to more than one role.	Раздел %s назначен нескольким ролям.
+The partitions belong to /dev/%s, but the selected disk is %s.	Разделы относятся к /dev/%s, а выбран диск %s.
+Desktop: %s.	Графическое окружение: %s.
+Hostname: %s.	Имя хоста: %s.
+Timezone: %s.	Часовой пояс: %s.
+Locale: %s.	Локаль: %s.
+Keymap: %s.	Раскладка: %s.
+Username: %s.	Пользователь: %s.
+CFLAGS: %s.	CFLAGS: %s.
+USE: %s.	USE: %s.
+VIDEO_CARDS: %s.	VIDEO_CARDS: %s.
+Kernel cmdline: %s.	Командная строка ядра: %s.
+%s: %s.	%s: %s.
+MAKEOPTS: %s.	MAKEOPTS: %s.
+Step already completed	Этап уже завершён
+%s: this step is already complete, so changes will not be applied.\\nTo configure the installation again, reset the state in the main menu.	%s: этот этап уже выполнен, поэтому изменения не будут применены.\nЧтобы настроить установку заново, сбросьте состояние в главном меню.
+Boot mode	Режим загрузки
+Current Minimal CD mode: %s	Текущий режим Minimal CD: %s
+ESP at /efi, GRUB bootloader (x86_64-efi)	ESP в /efi, загрузчик GRUB (x86_64-efi)
+/boot partition, GRUB bootloader (i386-pc)	раздел /boot, загрузчик GRUB (i386-pc)
+Swap partition	Раздел swap
+Swap can be omitted if there is enough RAM	Swap можно не создавать, если достаточно RAM
+Automatic	Автоматически
+Gentoo Handbook table: 4-8 GiB depending on RAM	По таблице Gentoo Handbook: 4–8 GiB в зависимости от RAM
+No swap	Без swap
+Do not create a swap partition	Не создавать раздел подкачки
+Custom size	Свой размер
+Specify the size in MiB	Указать размер в MiB
+Swap size	Размер swap
+Enter the swap size in MiB:	Укажите размер swap в MiB:
+A separate /home makes reinstalling easier	Отдельный /home упрощает переустановку системы
+No separate /home	Без отдельного /home
+Home directories live on the root partition	Домашние каталоги на корневом разделе
+Create or use a dedicated partition	Создать или использовать отдельный раздел
+/home size	Размер /home
+Enter the /home size in MiB:	Укажите размер /home в MiB:
+Partitions assigned	Разделы назначены
+Formatting and filesystem checks will be performed in the disk step.	Форматирование и проверка файловых систем будут выполнены на этапе диска.
+Disk already partitioned	Диск уже размечен
+Partitioning is complete. To change the disk or layout,\\nreset the installation state in the main menu.	Разметка завершена. Чтобы изменить диск или схему,\nсбросьте состояние установки в главном меню.
+Press "Start installation" after checking the settings	Нажмите "Начать установку" после проверки параметров
+Plan: %s	План: %s
+Plan: error - %s	План: ошибка — %s
+Disk and partitioning	Диск и разметка
+Mode: %s	Режим: %s
+auto - automatic layout, manual - your own partitions	auto — автоматическая разметка, manual — свои разделы
+Target disk: %s	Целевой диск: %s
+Choose the installation disk	Выберите диск для установки
+Boot mode: %s	Режим загрузки: %s
+UEFI+GPT or BIOS+MBR	UEFI+GPT или BIOS+MBR
+Root filesystem: %s	Файловая система root: %s
+xfs, ext4 or btrfs	xfs, ext4 или btrfs
+/home filesystem: %s	Файловая система /home: %s
+Used for a separate /home	Используется для отдельного /home
+Swap: %s	Swap: %s
+Automatic, none or a custom size	Автоматически, без swap или свой размер
+/home: %s	/home: %s
+Separate partition or part of root	Отдельный раздел или часть корневого
+Assign partitions manually	Назначить разделы вручную
+For manual mode: choose existing partitions	Для ручного режима: выбрать существующие разделы
+Back	Назад
+Return to the main menu	Вернуться в главное меню
+Partitioning mode	Режим разметки
+The automatic layout destroys the partition table	Автоматическая схема уничтожит таблицу разделов
+Create GPT/MBR and partitions according to the plan	Создать GPT/MBR и разделы по плану
+Manual	Вручную
+Use partitions that already exist	Использовать уже существующие разделы
+Stage3 download and package build settings	Настройки загрузки Stage3 и сборки пакетов
+Stage3: %s	Stage3: %s
+openrc/systemd and desktop variants	варианты openrc/systemd и desktop
+Mirror: %s	Зеркало: %s
+Base distfiles.gentoo.org URL	Базовый URL distfiles.gentoo.org
+Direct Stage3 URL: %s	Прямой URL Stage3: %s
+automatic	автоматически
+Empty - use latest-stage3	Пусто — использовать latest-stage3
+Profile: %s	Профиль: %s
+stage, desktop, gnome, kde, hardened; kept in sync with DESKTOP	stage, desktop, gnome, kde, hardened; синхронизируется с DESKTOP
+CPU_FLAGS_X86: %s	CPU_FLAGS_X86: %s
+Detect with cpuid2cpuflags	Определить через cpuid2cpuflags
+Update @world: %s	Обновление @world: %s
+Can take a long time	Может занять много времени
+MAKEOPTS: %s	MAKEOPTS: %s
+Number of parallel build jobs	Количество параллельных задач сборки
+CFLAGS: %s	CFLAGS: %s
+Compiler flags	Флаги компилятора
+VIDEO_CARDS: %s	VIDEO_CARDS: %s
+not set	не задано
+GPU drivers for Portage	Драйверы GPU для Portage
+Extra USE: %s	Дополнительные USE: %s
+Additional USE flags	Дополнительные USE-флаги
+Return	Назад
+Stage3 already installed	Stage3 уже установлен
+The Stage3 variant cannot be changed after extraction.\\nReset the state if you need a different variant.	Вариант Stage3 нельзя изменить после распаковки.\nСбросьте состояние, если нужен другой вариант.
+Stage3 variant	Вариант Stage3
+Choose the init system and software set	Выберите систему инициализации и набор ПО
+Classic Gentoo, minimal Stage3	Классический Gentoo, минимальный Stage3
+Stage3 with systemd	Stage3 с systemd
+Stage3 with graphical libraries	Stage3 с графическими библиотеками
+Stage3 with graphics and systemd	Stage3 с графикой и systemd
+distfiles mirror	зеркало distfiles
+Mirror base URL:	Базовый URL зеркала:
+For example: https://distfiles.gentoo.org	Например: https://distfiles.gentoo.org
+Direct Stage3 URL	Прямой URL Stage3
+Leave empty for automatic selection:	Оставьте пустым для автоматического выбора:
+Full URL to the .tar.xz file	Полный URL к файлу .tar.xz
+Portage profile	Профиль Portage
+The profile controls USE flags and the package set	Профиль управляет USE-флагами и набором пакетов
+Base profile without a desktop	Базовый профиль без графической среды
+Desktop profile	Профиль Desktop
+Desktop + GNOME	Desktop + GNOME
+Desktop + KDE	Desktop + KDE
+Additional hardening	Дополнительное усиление защиты
+CPU_FLAGS_X86	CPU_FLAGS_X86
+Detect CPU flags with cpuid2cpuflags?	Определить CPU-флаги через cpuid2cpuflags?
+Update @world	Обновить @world
+Run emerge --update --deep --newuse @world? This can take a long time.	Выполнить emerge --update --deep --newuse @world? Это может занять много времени.
+MAKEOPTS	MAKEOPTS
+Based on CPU and RAM: %s	В зависимости от CPU и RAM: %s
+Specify a number	Указать число
+Enter it manually	Ввести вручную
+Number of make jobs:	Количество задач make:
+CFLAGS	CFLAGS
+Compiler flags:	Флаги компилятора:
+Usually: -march=native -O2 -pipe	Обычно: -march=native -O2 -pipe
+VIDEO_CARDS	VIDEO_CARDS
+Video drivers (space-separated, may be empty):	Драйверы видео (через пробел, могут быть пустыми):
+For example: amdgpu radeonsi or intel	Например: amdgpu radeonsi или intel
+USE flags	USE-флаги
+Additional USE flags (space-separated):	Дополнительные USE-флаги (через пробел):
+For example: cups bluetooth	Например: cups bluetooth
+Kernel and bootloader	Ядро и загрузчик
+Kernel installation settings	Параметры установки ядра
+Method: %s	Метод: %s
+bin, dist or manual	bin, dist или manual
+linux-firmware: %s	linux-firmware: %s
+Needed for Wi-Fi, GPUs and more	Нужен для Wi-Fi, GPU и другого оборудования
+CPU microcode: %s	Микрокод CPU: %s
+auto, none, intel or amd	auto, none, intel или amd
+Kernel cmdline: %s	Командная строка ядра: %s
+empty	пусто
+Additional kernel parameters	Дополнительные параметры ядра
+Bootloader: %s	Загрузчик: %s
+Only GRUB is supported in this version	В этой версии поддерживается только GRUB
+Kernel installation method	Метод установки ядра
+Choose how to obtain the kernel	Выберите способ получения ядра
+Prebuilt binary kernel, fast	Готовое бинарное ядро, быстро
+Build with the Gentoo configuration	Сборка с конфигурацией Gentoo
+Manual configuration with menuconfig	Ручная настройка через menuconfig
+Install sys-kernel/linux-firmware? The package is large.	Установить sys-kernel/linux-firmware? Пакет большой.
+CPU microcode	Микрокод CPU
+Microcode updates are loaded at boot	Обновления микрокода загружаются при старте
+Detect the CPU vendor	Определить производителя CPU
+Do not install	Не устанавливать
+Kernel cmdline	Командная строка ядра
+Additional parameters (root is added automatically):	Дополнительные параметры (root добавляется автоматически):
+For example: quiet splash	Например: quiet splash
+Bootloader	Загрузчик
+This version supports GRUB for UEFI and BIOS only.	В этой версии GRUB поддерживается только для UEFI и BIOS.
+The desktop environment is already installed. To change the choice,\\nreset the installation state in the main menu.	Графическое окружение уже установлено. Чтобы изменить выбор,\nсбросьте состояние установки в главном меню.
+XFCE or GNOME; the Portage profile follows the choice	XFCE или GNOME; профиль Portage следует за выбором
+No desktop environment	Без графической среды
+Install a console-only system	Установить систему без графики
+Lightweight desktop for everyday use	Лёгкая среда для повседневной работы
+Full GNOME environment; many packages	Полное окружение GNOME; много пакетов
+Profile changed after Portage	Профиль изменён после Portage
+Portage is already complete, so the new profile %s will not be\\napplied to the installed system. The desktop will be installed with the\\ncurrent profile. Reset the state and start over to change the profile.	Portage уже завершён, поэтому новый профиль %s не будет\nприменён к установленной системе. Графическое окружение будет\nустановлено с текущим профилем. Сбросьте состояние и начните заново, чтобы сменить профиль.
+VIDEO_CARDS is not set	VIDEO_CARDS не задан
+For hardware acceleration, specify GPU drivers under\\n"Stage3 and Portage -> VIDEO_CARDS". Without VIDEO_CARDS, Xorg may\\nonly use a basic mode.	Для аппаратного ускорения укажите драйверы GPU в разделе\n"Stage3 и Portage -> VIDEO_CARDS". Без VIDEO_CARDS Xorg может\nработать только в базовом режиме.
+System	Система
+Hostname, time, locale and console	Имя хоста, время, локаль и консоль
+Hostname: %s	Имя хоста: %s
+Timezone: %s	Часовой пояс: %s
+Locale: %s	Локаль: %s
+Console keymap: %s	Раскладка консоли: %s
+Hardware clock: %s	Аппаратные часы: %s
+UTC or local	UTC или local
+Hostname	Имя хоста
+Enter the hostname:	Введите имя хоста:
+Latin letters, digits, dots and hyphens	Латинские буквы, цифры, точки и дефисы
+Timezone	Часовой пояс
+Enter the IANA zone:	Введите зону IANA:
+For example: Europe/Moscow or UTC	Например: Europe/Moscow или UTC
+Locale	Локаль
+Enter a UTF-8 locale:	Введите UTF-8 локаль:
+For example: ru_RU.UTF-8 or en_US.UTF-8	Например: ru_RU.UTF-8 или en_US.UTF-8
+Console keymap	Раскладка консоли
+Enter the keymap:	Введите раскладку:
+For example: us or ru	Например: us или ru
+Hardware clock	Аппаратные часы
+How time is stored in the RTC	Как время хранится в RTC
+Recommended, especially for dual boot	Рекомендуется, особенно для dual boot
+Local time	Местное время
+Services and users	Службы и пользователи
+Network, SSH, logging and accounts	Сеть, SSH, журналирование и учётные записи
+Network: %s	Сеть: %s
+dhcpcd, NetworkManager or no configuration	dhcpcd, NetworkManager или без настройки
+SSH server: %s	SSH-сервер: %s
+Cron: %s	Cron: %s
+Time sync: %s	Синхронизация времени: %s
+System log: %s	Системный журнал: %s
+sysklogd or rsyslog	sysklogd или rsyslog
+Install sudo: %s	Установить sudo: %s
+Rule for the wheel group	Правило для группы wheel
+Create user: %s	Создать пользователя: %s
+The password is requested in the system step	Пароль запрашивается на этапе системы
+Username: %s	Имя пользователя: %s
+Network configuration	Настройка сети
+Automatic configuration over DHCP	Автоматическая настройка по DHCP
+Simple DHCP client	Простой DHCP-клиент
+Convenient for Wi-Fi and desktops	Удобно для Wi-Fi и графических сред
+No configuration	Без настройки
+Configure networking manually after installation	Настроить сеть вручную после установки
+SSH server	SSH-сервер
+Install and enable OpenSSH?	Установить и включить OpenSSH?
+Cron	Cron
+Install and enable cronie?	Установить и включить cronie?
+Chrony	Chrony
+Install and enable time synchronization?	Установить и включить синхронизацию времени?
+System log	Системный журнал
+Install sysklogd/rsyslog?	Установить sysklogd/rsyslog?
+sudo	sudo
+Install sudo and allow the wheel group?	Установить sudo и разрешить группе wheel?
+User account	Учётная запись пользователя
+Create a regular user?	Создать обычного пользователя?
+Username	Имя пользователя
+Enter the username:	Введите имя пользователя:
+Lowercase Latin letters, digits, _ and -	Строчные латинские буквы, цифры, _ и -
+Boot: %s · Disk: %s · FS: %s	Загрузка: %s · Диск: %s · ФС: %s
+Stage3: %s · Kernel: %s · Desktop: %s	Stage3: %s · Ядро: %s · Графика: %s
+Progress: %s steps · Language: %s · Locale: %s	Прогресс: %s этапов · Язык: %s · Локаль: %s
+Saved	Сохранено
+Configuration written to %s.	Конфигурация записана в %s.
+Plan error: %s	Ошибка плана: %s
+unknown	неизвестно
+Disk mode: %s	Режим разметки: %s
+Disk: %s (%s)	Диск: %s (%s)
+Root FS: %s; /home FS: %s	ФС root: %s; ФС /home: %s
+Swap: %s; /home: %s	Swap: %s; /home: %s
+Direct URL: %s	Прямой URL: %s
+Profile: %s (%s)	Профиль: %s (%s)
+CPU_FLAGS: %s; MAKEOPTS: %s; @world: %s	CPU_FLAGS: %s; MAKEOPTS: %s; @world: %s
+USE: %s	USE: %s
+Kernel: %s; firmware: %s; microcode: %s	Ядро: %s; прошивки: %s; микрокод: %s
+Host: %s; TZ: %s; locale: %s; keymap: %s; hwclock: %s	Хост: %s; TZ: %s; локаль: %s; раскладка: %s; часы: %s
+Network: %s; SSH: %s; cron: %s; chrony: %s; syslog: %s; sudo: %s	Сеть: %s; SSH: %s; cron: %s; chrony: %s; журнал: %s; sudo: %s
+User: %s (create: %s)	Пользователь: %s (создать: %s)
+Language: %s; target locale: %s	Язык: %s; целевая локаль: %s
+Check the settings	Проверьте параметры
+Configuration summary	Сводка конфигурации
+Load configuration	Загрузить конфигурацию
+Path to the configuration file:	Путь к файлу конфигурации:
+File format: KEY="value"	Формат файла: KEY="value"
+File not found	Файл не найден
+Configuration loaded	Конфигурация загружена
+Settings were read from %s and saved to %s.	Параметры прочитаны из %s и сохранены в %s.
+About	О программе
+Gentoo Linux installer with a console interface.\\n\\nSupported: UEFI+GPT and BIOS+MBR, OpenRC and systemd,\\nbinary, distribution and manual kernels, GRUB,\\noptional XFCE + LightDM and GNOME + GDM.\\nNot supported: LUKS, LVM, RAID, Secure Boot signing and dual boot.\\n\\nThis project is distributed under the MIT license.\\nLogs: %s\\nState: %s	Установщик Gentoo Linux с консольным интерфейсом.\n\nПоддерживается: UEFI+GPT и BIOS+MBR, OpenRC и systemd,\nбинарное, дистрибутивное и ручное ядро, GRUB,\nопционально XFCE + LightDM и GNOME + GDM.\nНе поддерживается: LUKS, LVM, RAID, подпись Secure Boot и dual boot.\n\nПроект распространяется по лицензии MIT.\nЖурналы: %s\nСостояние: %s
+Enter - return	Enter — вернуться
+Reset state	Сбросить состояние
+Delete the markers for completed steps? Configuration and disk data are not removed.	Удалить отметки о завершённых этапах? Конфигурация и данные на диске не удаляются.
+failed to unmount the target partitions	не удалось размонтировать целевые разделы
+State reset	Состояние сброшено
+The next installation will start from the disk partitioning step.	Следующая установка начнётся с этапа разметки диска.
+New installation	Новая установка
+Completed steps found; installation will continue from where it stopped	Найдены завершённые этапы; установка продолжится с места остановки
+Start / continue installation	Начать / продолжить установку
+Mode, disk, filesystems, swap and /home	Режим, диск, файловые системы, swap и /home
+Mirror, profile, CFLAGS, USE, MAKEOPTS	Зеркало, профиль, CFLAGS, USE, MAKEOPTS
+Binary, distribution or manual kernel	Бинарное, дистрибутивное или ручное ядро
+Hostname, time, locale, keymap, clock	Имя хоста, время, локаль, раскладка, часы
+Network, SSH, cron, chrony, syslog, sudo	Сеть, SSH, cron, chrony, журнал, sudo
+XFCE, GNOME or no desktop	XFCE, GNOME или без графической среды
+Language: %s	Язык: %s
+English or Russian interface	Английский или русский интерфейс
+Check configuration	Проверить конфигурацию
+Show the summary and validation errors	Показать сводку и ошибки проверки
+Read a KEY="value" file	Прочитать файл KEY="value"
+Save configuration	Сохранить конфигурацию
+Write the settings to %s	Записать параметры в %s
+Open a shell	Открыть shell
+Leave the installer without unmounting	Выйти из установщика без размонтирования
+Version, limitations, logs	Версия, ограничения, журналы
+Start the installation over	Начать установку заново
+Exit	Выход
+Quit the installer	Выйти из установщика
+Main menu	Главное меню
+Review the settings first, then start the installation	Сначала проверьте параметры, затем начните установку
+Reset the state if you want to install the system again.	Сбросьте состояние, если хотите установить систему заново.
+Shell (exit to return to the installer)	Shell (exit — вернуться в установщик)
+Exit the installer	Выйти из установщика
+The installation is not complete. Exit? State will be saved so you can continue later.	Установка не завершена. Выйти? Состояние будет сохранено, чтобы продолжить позже.
+Language / Язык	Язык интерфейса
+Choose the installer language. / Выберите язык установщика.	Выберите язык установщика.
+English	Английский
+English interface	Английский интерфейс
+Русский интерфейс	Русский интерфейс
+↑/↓ — choose · Enter — confirm · Esc — back	↑/↓ — выбор · Enter — подтвердить · Esc — назад
+Enter — continue	Enter — продолжить
+Enter — close	Enter — закрыть
+Enter — back	Enter — назад
+Enter — accept · Ctrl-U — clear · Esc — cancel	Enter — принять · Ctrl-U — очистить · Esc — отмена
+Enter — start step	Enter — начать этап
+Enter password:	Введите пароль:
+Repeat password:	Повторите пароль:
+Passwords do not match	Пароли не совпадают
+Please try again.	Попробуйте ещё раз.
+Keyboard help	Справка по клавишам
+Arrow keys — move in a menu\nEnter — select or confirm\nEsc — go back or leave the current screen\nF1 — this help\nF2 or Ctrl-S — save the configuration\nF10 — exit the current menu\n\nThe bottom action bar always shows the available actions.	Стрелки — перемещение по меню\nEnter — выбрать или подтвердить\nEsc — вернуться назад или выйти с текущего экрана\nF1 — эта справка\nF2 или Ctrl-S — сохранить конфигурацию\nF10 — выйти из текущего меню\n\nНижняя панель действий всегда показывает доступные действия.
+Save	Сохранить
+The configuration is saved automatically when the wizard changes a value.	Конфигурация сохраняется автоматически при изменении значения в мастере.
+Input is hidden. The password is not written to disk.	Ввод скрыт. Пароль не записывается на диск.
+Environment check	Проверка окружения
+The installer checks the Minimal CD before changing the disk	Перед изменением диска установщик проверяет Minimal CD
+Critical problems found. Enter - exit	Найдены критические проблемы. Enter — выйти
+Enter - continue · Esc - exit	Enter — продолжить · Esc — выйти
+Important	Важно
+Enter - accept and continue · Esc - exit	Enter — принять и продолжить · Esc — выйти
+Required Minimal CD utilities are available	Обязательные утилиты Minimal CD доступны
+xfsprogs is available	xfsprogs доступны
+XFS is selected, but mkfs.xfs was not found	Выбрана XFS, но mkfs.xfs не найден
+mkfs.xfs was not found; XFS will be unavailable	mkfs.xfs не найден; XFS будет недоступен
+btrfs-progs is available	btrfs-progs доступны
+Btrfs is selected, but mkfs.btrfs was not found	Выбран Btrfs, но mkfs.btrfs не найден
+mkfs.btrfs was not found; Btrfs will be unavailable	mkfs.btrfs не найден; Btrfs будет недоступен
+GPG and the Gentoo release key are available	GPG и ключ релизов Gentoo доступны
+GPG is available, but the Gentoo release key was not found; only SHA256 will be verified	GPG есть, но ключ релизов Gentoo не найден; будет проверена только SHA256
+GPG was not found; only SHA256 will be verified	GPG не найден; будет проверена только SHA256
+Network access to distfiles.gentoo.org works	Сеть и доступ к distfiles.gentoo.org работают
+The network is unavailable, but all steps that require package downloads are complete	Сеть недоступна, но все этапы, требующие загрузки пакетов, уже завершены
+Cannot reach distfiles.gentoo.org; check the Minimal CD network	Нет доступа к distfiles.gentoo.org; проверьте сеть Minimal CD
+Secure Boot is enabled. Unsigned GRUB may fail to boot; disable Secure Boot	Secure Boot включён. Неподписанный GRUB может не загрузиться; отключите Secure Boot
+Secure Boot is disabled	Secure Boot выключен
+UEFI mode, efivars are available	UEFI-режим, efivars доступны
+UEFI mode, but efivars are not mounted	UEFI-режим, но efivars не смонтированы
+BIOS/Legacy mode	BIOS/Legacy-режим
+No whole disks were found	Не найдено ни одного целого диска
+Running as root	Запуск от root
+The script is not running as root	Скрипт запущен не от root
+Architecture: x86_64 (amd64)	Архитектура: x86_64 (amd64)
+Only amd64/x86_64 is supported; found: %s	Поддерживается только amd64/x86_64, найдено: %s
+Hostname cannot be empty.	Имя хоста не может быть пустым.
+Hostname is longer than 253 characters.	Имя хоста длиннее 253 символов.
+Use letters, digits, dots and hyphens.	Допустимы латинские буквы, цифры, точки и дефис.
+Two consecutive dots are not allowed.	Две точки подряд недопустимы.
+Username: a lowercase letter or _, up to 32 characters.	Имя: строчная латинская буква или _, до 32 символов.
+The root user already exists.	Пользователь root уже существует.
+Timezone must look like Europe/Moscow.	Часовой пояс должен иметь вид Europe/Moscow.
+Invalid timezone.	Недопустимый часовой пояс.
+Use a UTF-8 locale, for example ru_RU.UTF-8.	Используйте UTF-8 локаль, например ru_RU.UTF-8.
+Language must be en or ru.	Язык должен быть en или ru.
+Keymap: only letters, digits, _ and - are allowed.	Раскладка: только буквы, цифры, _ и -.
+Value cannot be empty.	Значение не может быть пустым.
+Enter an integer number of MiB.	Введите целое число MiB.
+Size must be greater than zero.	Размер должен быть больше нуля.
+Enter an integer.	Введите целое число.
+URL must start with http:// or https://.	URL должен начинаться с http:// или https://.
+Specify a block device under /dev.	Укажите блочное устройство в /dev.
+Supported filesystems: xfs, ext4 and btrfs.	Поддерживаются xfs, ext4 и btrfs.
+Expected yes or no.	Ожидается yes или no.
+Desktop: none, xfce or gnome.	Графическое окружение: none, xfce или gnome.
+Value contains invalid characters.	Значение содержит недопустимые символы.
+USE flags: space-separated, without quotes or special characters.	USE-флаги: через пробел, без кавычек и спецсимволов.
+Kernel command line contains invalid characters.	Командная строка ядра содержит недопустимые символы.
+Kernel command line must not contain $, ` or \\	Командная строка ядра не должна содержать $, ` или \\
+CFLAGS cannot be empty.	CFLAGS не могут быть пустыми.
+CFLAGS contains invalid characters.	CFLAGS содержит недопустимые символы.
+UI language: en or ru.	Язык интерфейса: en или ru.
+Boot mode: uefi or bios.	Режим загрузки: uefi или bios.
+UEFI is selected, but the Minimal CD booted in BIOS mode. Reboot the CD in UEFI mode.	Выбран UEFI, но Minimal CD загружен в BIOS-режиме. Перезагрузите CD в UEFI.
+BIOS is selected, but the Minimal CD booted in UEFI mode.	Выбран BIOS, но Minimal CD загружен в UEFI-режиме.
+Disk mode: auto or manual.	Режим разметки: auto или manual.
+No valid target disk is selected.	Не выбран корректный целевой диск.
+The disk is smaller than 16 GiB; a Gentoo installation may not fit.	Диск меньше 16 GiB: установка Gentoo может не поместиться.
+BIOS + MBR does not support disks larger than 2 TiB; use UEFI + GPT.	BIOS + MBR не поддерживает диски больше 2 TiB; используйте UEFI + GPT.
+The /home size must be an integer number of MiB.	Размер /home должен быть целым числом MiB.
+No valid disk is selected for the manual layout.	Для ручной схемы не выбран корректный диск.
+No root partition is selected for the manual layout.	Для ручной схемы не выбрана корневая партиция.
+No ESP is selected for UEFI.	Для UEFI не выбран ESP.
+No /boot partition is selected for BIOS.	Для BIOS не выбран раздел /boot.
+No /home partition is selected.	Не выбран раздел /home.
+All manual-layout partitions must be on the same disk.	Все разделы ручной схемы должны находиться на одном диске.
+Root filesystem: xfs, ext4 or btrfs.	Файловая система root: xfs, ext4 или btrfs.
+Filesystem for /home: xfs, ext4 or btrfs.	Файловая система /home: xfs, ext4 или btrfs.
+Filesystem for /boot: xfs, ext4 or btrfs.	Файловая система /boot: xfs, ext4 или btrfs.
+Custom swap size must be greater than zero.	Пользовательский размер swap должен быть больше нуля.
+Swap mode: auto, none or custom.	Режим swap: auto, none или custom.
+/home mode: no or separate.	Режим /home: no или separate.
+Unknown Stage3 variant.	Неизвестный вариант Stage3.
+Invalid mirror URL.	Некорректный URL зеркала.
+Invalid Stage3 URL.	Некорректный URL Stage3.
+Unknown Portage profile.	Неизвестный профиль Portage.
+Unknown kernel installation method.	Неизвестный метод установки ядра.
+Microcode: auto, none, intel or amd.	Микрокод: auto, none, intel или amd.
+This version supports GRUB only.	В этой версии поддерживается только GRUB.
+Unknown network configuration method.	Неизвестный способ настройки сети.
+Hardware clock: UTC or local.	Часы: UTC или local.

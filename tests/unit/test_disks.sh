@@ -82,11 +82,74 @@ assert_ok "nvme plan" disk_plan_build uefi 65536
 assert_eq "/dev/nvme0n1p1" "$(plan_partition_path 0)"
 assert_eq "/dev/nvme0n1p2" "$(plan_partition_path 1)"
 assert_contains "$(disk_plan_print)" "UEFI + GPT"
-assert_contains "$(disk_plan_markdown)" "| Раздел |"
+assert_contains "$(disk_plan_markdown)" "| Partition |"
 
 # choose the correct parted filesystem type token
 assert_eq "fat32" "$(parted_fs_type vfat)"
 assert_eq "linux-swap" "$(parted_fs_type swap)"
 assert_eq "xfs" "$(parted_fs_type xfs)"
+
+# ---------------------------------------------------------------------------
+# Disk size detection fallbacks (KVM/QEMU virtio regression)
+# ---------------------------------------------------------------------------
+fake_bin="${GI_TEST_TMP}/fakebin"
+sys_block="${GI_TEST_TMP}/sys/block"
+sys_class_block="${GI_TEST_TMP}/sys/class/block"
+mkdir -p "$fake_bin" "$sys_block/vda" "$sys_class_block/vda"
+
+cat >"$fake_bin/blockdev" <<'EOF'
+#!/bin/sh
+case "${FAKE_BLOCKDEV:-}" in
+    fail) exit 1 ;;
+    "") exit 1 ;;
+    *) printf '%s\n' "$FAKE_BLOCKDEV" ;;
+esac
+EOF
+cat >"$fake_bin/lsblk" <<'EOF'
+#!/bin/sh
+[ -n "${FAKE_LSBLK:-}" ] && printf '%s\n' "$FAKE_LSBLK"
+exit 0
+EOF
+chmod 0755 "$fake_bin/blockdev" "$fake_bin/lsblk"
+
+# 20 GiB virtio disk, sysfs reports 512-byte sectors.
+printf '41943040\n' >"$sys_block/vda/size"
+printf '41943040\n' >"$sys_class_block/vda/size"
+
+virtio_size() {
+    PATH="$fake_bin:$PATH" \
+        FAKE_BLOCKDEV="${FAKE_BLOCKDEV:-fail}" \
+        FAKE_LSBLK="${FAKE_LSBLK:-}" \
+        GI_SYS_BLOCK="$sys_block" \
+        GI_SYS_CLASS_BLOCK="$sys_class_block" \
+        disk_size_mib /dev/vda
+}
+
+assert_eq "20480" "$(FAKE_BLOCKDEV=0 FAKE_LSBLK=0 virtio_size)" \
+    "virtio size uses sysfs when blockdev and lsblk return zero"
+assert_eq "20480" "$(FAKE_BLOCKDEV=fail FAKE_LSBLK=21474836480 virtio_size)" \
+    "virtio size falls back to lsblk bytes"
+printf '2097152\n' >"$sys_block/vda/size"
+assert_eq "1024" "$(FAKE_BLOCKDEV=0 FAKE_LSBLK=0 virtio_size)" \
+    "virtio size falls back to sysfs sectors"
+printf '41943040\n' >"$sys_block/vda/size"
+
+if FAKE_BLOCKDEV=0 FAKE_LSBLK=0
+    GI_SYS_BLOCK="$sys_block" GI_SYS_CLASS_BLOCK="$sys_class_block" \
+    PATH="$fake_bin:$PATH" disk_size_mib /dev/vdb >/dev/null 2>&1; then
+    printf '  FAIL: missing disk size must not be reported as zero MiB\n'
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+TESTS_RUN=$((TESTS_RUN + 1))
+
+if FAKE_BLOCKDEV=0 FAKE_LSBLK=0
+    GI_SYS_BLOCK="$sys_block" GI_SYS_CLASS_BLOCK="$sys_class_block" \
+    PATH="$fake_bin:$PATH" disk_size_mib /dev/vda >/dev/null 2>&1; then
+    :
+else
+    printf '  FAIL: a valid virtio disk size must be accepted\n'
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+TESTS_RUN=$((TESTS_RUN + 1))
 
 finish_tests

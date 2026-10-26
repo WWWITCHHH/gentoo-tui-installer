@@ -6,7 +6,8 @@ PREFLIGHT_FAILED=0
 PREFLIGHT_WARNED=0
 
 preflight_line() {
-    local level=$1 message=$2
+    local level=$1 message
+    message=$(i18n_text "$2")
     PREFLIGHT_LINES+=("${level}|${message}")
     case "$level" in
         fail) PREFLIGHT_FAILED=1 ;;
@@ -18,7 +19,7 @@ preflight_line() {
 preflight_required_commands() {
     local cmd missing=()
     local commands=(
-        awk blkid blockdev chroot curl cut df find findmnt flock fold grep lsblk
+        awk blkid blockdev chroot curl cut df env find findmnt flock fold grep lsblk
         mkfs.ext4 mkfs.vfat mkswap mount mountpoint od parted partprobe readlink
         sed sha256sum sort stat swapon swapoff tar tee udevadm umount wc wipefs
         xargs xz
@@ -27,9 +28,9 @@ preflight_required_commands() {
         command_exists "$cmd" || missing+=("$cmd")
     done
     if ((${#missing[@]})); then
-        preflight_line fail "Нет обязательных команд: ${missing[*]}"
+        preflight_line fail "$(T 'Missing required commands: %s' "${missing[*]}")"
     else
-        preflight_line ok "Обязательные утилиты Minimal CD доступны"
+        preflight_line ok "Required Minimal CD utilities are available"
     fi
 
     local fs need_xfs=0 need_btrfs=0
@@ -43,27 +44,27 @@ preflight_required_commands() {
         esac
     done
     if command_exists mkfs.xfs; then
-        preflight_line ok "xfsprogs доступны"
+        preflight_line ok "xfsprogs is available"
     elif ((need_xfs)); then
-        preflight_line fail "Выбрана XFS, но mkfs.xfs не найден"
+        preflight_line fail "XFS is selected, but mkfs.xfs was not found"
     else
-        preflight_line warn "mkfs.xfs не найден; XFS будет недоступен"
+        preflight_line warn "mkfs.xfs was not found; XFS will be unavailable"
     fi
     if command_exists mkfs.btrfs; then
-        preflight_line ok "btrfs-progs доступны"
+        preflight_line ok "btrfs-progs is available"
     elif ((need_btrfs)); then
-        preflight_line fail "Выбран Btrfs, но mkfs.btrfs не найден"
+        preflight_line fail "Btrfs is selected, but mkfs.btrfs was not found"
     else
-        preflight_line warn "mkfs.btrfs не найден; Btrfs будет недоступен"
+        preflight_line warn "mkfs.btrfs was not found; Btrfs will be unavailable"
     fi
     if command_exists gpg; then
         if [[ -f /usr/share/openpgp-keys/gentoo-release.asc ]]; then
-            preflight_line ok "GPG и ключ релизов Gentoo доступны"
+            preflight_line ok "GPG and the Gentoo release key are available"
         else
-            preflight_line warn "GPG есть, но ключ релизов Gentoo не найден; будет проверена только SHA256"
+            preflight_line warn "GPG is available, but the Gentoo release key was not found; only SHA256 will be verified"
         fi
     else
-        preflight_line warn "GPG не найден; будет проверена только SHA256"
+        preflight_line warn "GPG was not found; only SHA256 will be verified"
     fi
 }
 
@@ -74,12 +75,12 @@ preflight_network() {
         desktop_pending=1
     fi
     if command_exists curl && curl -fsIL --max-time 12 "$url" >/dev/null 2>&1; then
-        preflight_line ok "Сеть и доступ к distfiles.gentoo.org работают"
+        preflight_line ok "Network access to distfiles.gentoo.org works"
     elif state_is_done stage3 && state_is_done portage && state_is_done kernel &&
         state_is_done tools && state_is_done bootloader && ((!desktop_pending)); then
-        preflight_line warn "Сеть недоступна, но все этапы, требующие загрузки пакетов, уже завершены"
+        preflight_line warn "The network is unavailable, but all steps that require package downloads are complete"
     else
-        preflight_line fail "Нет доступа к distfiles.gentoo.org; проверьте сеть Minimal CD"
+        preflight_line fail "Cannot reach distfiles.gentoo.org; check the Minimal CD network"
     fi
 }
 
@@ -88,11 +89,11 @@ preflight_clock() {
     epoch=$(date +%s)
     year=$(date +%Y)
     if ((epoch < 1704067200)); then
-        preflight_line fail "Системные часы установлены неверно (${year}); синхронизируйте время"
+        preflight_line fail "$(T 'The system clock is wrong (%s); synchronize the time' "$year")"
     elif ((epoch > 2208988800)); then
-        preflight_line warn "Системные часы выглядят подозрительно (${year})"
+        preflight_line warn "$(T 'The system clock looks suspicious (%s)' "$year")"
     else
-        preflight_line ok "Системная дата: $(date -u '+%Y-%m-%d %H:%M UTC')"
+        preflight_line ok "$(T 'System date: %s' "$(date -u '+%Y-%m-%d %H:%M UTC')")"
     fi
 }
 
@@ -106,46 +107,46 @@ preflight_secure_boot() {
         state=$(od -An -t u1 -- "$file" 2>/dev/null | awk '{print $NF; exit}')
     fi
     if [[ $state == 1 ]]; then
-        preflight_line warn "Secure Boot включён. Неподписанный GRUB может не загрузиться; отключите Secure Boot"
+        preflight_line warn "Secure Boot is enabled. Unsigned GRUB may fail to boot; disable Secure Boot"
     elif [[ $state == 0 ]]; then
-        preflight_line ok "Secure Boot выключен"
+        preflight_line ok "Secure Boot is disabled"
     fi
 }
 
 preflight_uefi_variables() {
     if [[ -d /sys/firmware/efi ]]; then
         if [[ -d /sys/firmware/efi/efivars ]]; then
-            preflight_line ok "UEFI-режим, efivars доступны"
+            preflight_line ok "UEFI mode, efivars are available"
         else
-            preflight_line fail "UEFI-режим, но efivars не смонтированы"
+            preflight_line fail "UEFI mode, but efivars are not mounted"
         fi
     else
-        preflight_line ok "BIOS/Legacy-режим"
+        preflight_line ok "BIOS/Legacy mode"
     fi
 }
 
 preflight_disks() {
     local disks=("$@")
     if ((${#disks[@]} == 0)); then
-        preflight_line fail "Не найдено ни одного целого диска"
+        preflight_line fail "No whole disks were found"
         return
     fi
     if [[ -z $CFG_DISK ]]; then
-        preflight_line warn "Найдено дисков: ${#disks[@]}; целевой диск ещё не выбран"
+        preflight_line warn "$(T 'Disks found: %s; no target disk has been selected yet' "${#disks[@]}")"
         return
     fi
     if validate_disk_device "$CFG_DISK" 2>/dev/null; then
-        preflight_line ok "Найдено дисков: ${#disks[@]}; выбран ${CFG_DISK}"
+        preflight_line ok "$(T 'Disks found: %s; selected %s' "${#disks[@]}" "$CFG_DISK")"
     else
-        preflight_line warn "Сохранённый диск ${CFG_DISK} не найден; выберите диск в параметрах"
+        preflight_line warn "$(T 'The saved disk %s was not found; select a disk in the settings' "$CFG_DISK")"
     fi
 }
 
 preflight_workdir() {
     if [[ -w $GI_WORKDIR ]]; then
-        preflight_line ok "Рабочий каталог: ${GI_WORKDIR}"
+        preflight_line ok "$(T 'Working directory: %s' "$GI_WORKDIR")"
     else
-        preflight_line fail "Рабочий каталог недоступен для записи: ${GI_WORKDIR}"
+        preflight_line fail "$(T 'Working directory is not writable: %s' "$GI_WORKDIR")"
     fi
 }
 
@@ -155,14 +156,14 @@ preflight_collect() {
     PREFLIGHT_WARNED=0
 
     if [[ ${EUID:-$(id -u)} -eq 0 ]]; then
-        preflight_line ok "Запуск от root"
+        preflight_line ok "Running as root"
     else
-        preflight_line fail "Скрипт запущен не от root"
+        preflight_line fail "The script is not running as root"
     fi
     if [[ $(uname -m) == x86_64 ]]; then
-        preflight_line ok "Архитектура: x86_64 (amd64)"
+        preflight_line ok "Architecture: x86_64 (amd64)"
     else
-        preflight_line fail "Поддерживается только amd64/x86_64, найдено: $(uname -m)"
+        preflight_line fail "$(T 'Only amd64/x86_64 is supported; found: %s' "$(uname -m)")"
     fi
     preflight_uefi_variables
     preflight_required_commands
@@ -179,14 +180,14 @@ preflight_collect() {
         [[ -r /sys/block/${CFG_DISK##*/}/removable ]] &&
             read -r removable <"/sys/block/${CFG_DISK##*/}/removable" || true
         if [[ $removable == 1 ]]; then
-            preflight_line warn "Целевой диск ${CFG_DISK} выглядит съёмным. Убедитесь, что это не установочный носитель"
+            preflight_line warn "$(T 'The target disk %s looks removable. Make sure it is not the installation media' "$CFG_DISK")"
         fi
     fi
 }
 
 preflight_render() {
     local entry level message symbol color
-    ui_header "Проверка окружения" "Перед изменением диска установщик проверяет Minimal CD"
+    ui_header "Environment check" "The installer checks the Minimal CD before changing the disk"
     for entry in "${PREFLIGHT_LINES[@]}"; do
         IFS='|' read -r level message <<<"$entry"
         case "$level" in
@@ -198,11 +199,11 @@ preflight_render() {
     done
     printf '\n'
     if ((PREFLIGHT_FAILED)); then
-        ui_footer "Есть критические проблемы. Enter — выйти"
+        ui_footer "Critical problems found. Enter - exit"
         ui_read_key || true
         return 1
     fi
-    ui_footer "Enter — продолжить · Esc — выйти"
+    ui_footer "Enter - continue · Esc - exit"
     if ! ui_read_key; then
         return 1
     fi
@@ -224,22 +225,10 @@ preflight_run() {
 
 preflight_install_media_warning() {
     local body
-    body="Этот установщик СОЗДАЁТ И УДАЛЯЕТ РАЗДЕЛЫ И ФАЙЛОВЫЕ СИСТЕМЫ.
-
-Резервная копия данных обязательна. Установщик не поддерживает
-шифрование, LVM, RAID и автоматическую настройку dual boot.
-
-Поддерживаются сценарии Gentoo Handbook:
-  • UEFI + GPT, загрузчик GRUB (ESP в /efi)
-  • BIOS + MBR, загрузчик GRUB (/boot)
-
-Этапы: проверка → диск → stage3 → Portage → ядро → система
-→ службы → загрузчик → графическое окружение → завершение.
-
-Продолжайте только если понимаете последствия."
-    ui_header "Важно"
+    body=$(T 'This installer CREATES AND DELETES PARTITIONS AND FILESYSTEMS.\n\nA data backup is mandatory. The installer does not support\nencryption, LVM, RAID or automatic dual-boot configuration.\n\nSupported Gentoo Handbook scenarios:\n  • UEFI + GPT, GRUB bootloader (ESP at /efi)\n  • BIOS + MBR, GRUB bootloader (/boot)\n\nSteps: check -> disk -> Stage3 -> Portage -> kernel -> system\n-> services -> bootloader -> desktop environment -> finish.\n\nContinue only if you understand the consequences.')
+    ui_header "Important"
     ui_wrap "$body"
-    ui_footer "Enter — принять и продолжить · Esc — выйти"
+    ui_footer "Enter - accept and continue · Esc - exit"
     ui_read_key || return 1
     [[ $UI_KEY != esc ]]
 }

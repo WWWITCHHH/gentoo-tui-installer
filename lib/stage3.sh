@@ -30,12 +30,12 @@ stage3_resolve() {
 
     latest_file="${GI_DOWNLOAD_DIR}/latest-stage3-amd64-${CFG_STAGE_FLAVOR}.txt"
     latest_url="${base}/$(stage3_latest_path)"
-    ui_download "$latest_url" "$latest_file" 0 "Список последних stage3" || return 1
+    ui_download "$latest_url" "$latest_file" 0 "$(T 'Latest Stage3 list')" || return 1
 
     line=$(grep -E '^[0-9]{8}T[0-9]{6}Z/stage3-amd64-[^ ]+\.tar\.xz [0-9]+$' "$latest_file" | tail -n 1 || true)
     if [[ -z $line ]]; then
-        ui_error "Некорректный список stage3" \
-            "Не удалось найти путь к архиву в ${latest_file}. Проверьте зеркало и вариант stage3."
+        ui_error "$(T 'Invalid Stage3 list')" \
+            "$(T 'Could not find an archive path in %s. Check the mirror and the Stage3 variant.' "$latest_file")"
         return 1
     fi
     rel=${line%% *}
@@ -53,19 +53,19 @@ stage3_fetch_sidecars() {
     STAGE3_ASC="${STAGE3_TARBALL}.asc"
 
     if curl -fsIL --max-time 25 "$sha_url" >/dev/null 2>&1; then
-        ui_download "$sha_url" "$STAGE3_SHA256" 0 "Контрольная сумма SHA256" || return 1
+        ui_download "$sha_url" "$STAGE3_SHA256" 0 "$(T 'SHA256 checksum')" || return 1
     else
         log_warn "SHA256 sidecar not available: $sha_url"
         STAGE3_SHA256=""
     fi
     if curl -fsIL --max-time 25 "$asc_url" >/dev/null 2>&1; then
-        ui_download "$asc_url" "$STAGE3_ASC" 0 "Подпись GPG" || return 1
+        ui_download "$asc_url" "$STAGE3_ASC" 0 "$(T 'GPG signature')" || return 1
     else
         log_warn "GPG signature not available: $asc_url"
         STAGE3_ASC=""
     fi
     if [[ -z $STAGE3_SHA256 && -z $STAGE3_ASC ]]; then
-        die "для stage3 недоступны ни SHA256, ни GPG-подпись; установка небезопасна"
+        die "$(T 'neither SHA256 nor a GPG signature is available for Stage3; installation is unsafe')"
     fi
     return 0
 }
@@ -75,23 +75,21 @@ stage3_verify_sha256() {
     [[ -n $STAGE3_SHA256 && -f $STAGE3_SHA256 ]] || return 0
     expected=$(grep -m1 -E '^[0-9a-f]{64}[[:space:]]+' "$STAGE3_SHA256" | awk '{print $1}' || true)
     if [[ -z $expected ]]; then
-        ui_error "Проверка SHA256" "В файле ${STAGE3_SHA256} не найдена контрольная сумма."
+        ui_error "$(T 'SHA256 verification')" "$(T 'No checksum was found in %s.' "$STAGE3_SHA256")"
         return 1
     fi
-    ui_header "Проверка целостности" "Вычисление SHA256 для $(basename -- "$STAGE3_TARBALL")"
-    printf '  %sОжидается:%s %s\n' "$C_DIM" "$C_RESET" "$expected"
+    ui_header "$(T 'Integrity check')" "$(T 'Computing SHA256 for %s' "$(basename -- "$STAGE3_TARBALL")")"
+    printf '  %s%s%s %s\n' "$C_DIM" "$(T 'Expected:')" "$C_RESET" "$expected"
     actual=$(sha256sum -- "$STAGE3_TARBALL" 2>/dev/null | awk '{print $1}')
     if [[ $actual != "$expected" ]]; then
-        ui_error "Проверка SHA256 не пройдена" \
-            "Ожидалось: ${expected}
-Получено:  ${actual:-нет}
-Архив повреждён или подменён. Установка остановлена.
-Повреждённый файл удалён; при повторе он будет загружен заново."
+        ui_error "$(T 'SHA256 verification failed')" \
+            "$(T 'Expected: %s\nGot:      %s\nThe archive is corrupted or was replaced. Installation stopped.\nThe damaged file has been removed and will be downloaded again.' \
+                "$expected" "${actual:-$(T 'none')}")"
         rm -f -- "$STAGE3_TARBALL"
         return 1
     fi
-    printf '  %sПолучено: %s ✓%s\n' "$C_GREEN" "$actual" "$C_RESET"
-    ui_pause "Enter — продолжить"
+    printf '  %s%s %s ✓%s\n' "$C_GREEN" "$(T 'Got:')" "$actual" "$C_RESET"
+    ui_pause "$(T 'Enter - continue')"
     log_info "stage3 SHA256 verified: $actual"
     return 0
 }
@@ -114,28 +112,27 @@ stage3_verify_gpg() {
     [[ -n $STAGE3_ASC && -f $STAGE3_ASC ]] || return 0
     if ! command_exists gpg; then
         if [[ -z $STAGE3_SHA256 ]]; then
-            die "GPG недоступен, а SHA256 для stage3 отсутствует"
+            die "$(T 'GPG is unavailable and no SHA256 checksum exists for Stage3')"
         fi
         warning_no_gpg
         return 0
     fi
     if ! stage3_import_gentoo_key; then
         if [[ -z $STAGE3_SHA256 ]]; then
-            die "ключ Gentoo не найден, а SHA256 для stage3 отсутствует"
+            die "$(T 'the Gentoo key was not found and no SHA256 checksum exists for Stage3')"
         fi
         warning_no_gpg
         return 0
     fi
-    ui_run "Проверка подписи stage3" gpg --homedir "$GI_GNUPG_HOME" --batch --no-tty \
+    ui_run "$(T 'Verifying the Stage3 signature')" gpg --homedir "$GI_GNUPG_HOME" --batch --no-tty \
         --verify "$STAGE3_ASC" "$STAGE3_TARBALL" || return 1
     log_info "stage3 GPG signature verified"
     return 0
 }
 
 warning_no_gpg() {
-    warn "ключ релизов Gentoo не найден: GPG-подпись не проверена, используется только SHA256"
-    ui_msg "GPG недоступен" "Ключ релизов Gentoo не найден в Minimal CD.
-Будет проверена только контрольная сумма SHA256."
+    warn "$(T 'the Gentoo release key was not found: the GPG signature was not checked, only SHA256 is used')"
+    ui_msg "$(T 'GPG unavailable')" "$(T 'The Gentoo release key was not found on the Minimal CD.\nOnly the SHA256 checksum will be verified.')"
 }
 
 stage3_download() {
@@ -151,9 +148,9 @@ stage3_extract() {
     if [[ -e "$GI_ROOT/etc/os-release" ]]; then
         log_warn "stage3 overlay already present in $GI_ROOT"
     fi
-    ui_run "Распаковка stage3 в ${GI_ROOT}" \
+    ui_run "$(T 'Extracting Stage3 to %s' "$GI_ROOT")" \
         tar --xattrs-include='*.*' --numeric-owner -xpvf "$STAGE3_TARBALL" -C "$GI_ROOT" || return 1
-    ui_run "Синхронизация записи stage3" sync || true
+    ui_run "$(T 'Syncing Stage3 writes')" sync || true
     log_info "stage3 extracted to $GI_ROOT"
 }
 

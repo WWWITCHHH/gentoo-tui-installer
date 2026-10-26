@@ -8,6 +8,11 @@
 
 SCHEMA="1"
 
+# Interface language: en (default) or ru. The Russian interface uses a UTF-8
+# locale when one is available or can be generated. This value never affects
+# the target system locale (LOCALE below).
+UI_LANGUAGE="en"
+
 # ---------------------------------------------------------------------------
 # Boot mode, disk and partitions
 # ---------------------------------------------------------------------------

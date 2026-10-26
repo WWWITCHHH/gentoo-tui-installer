@@ -13,6 +13,10 @@ GI_LOG_DIR="${GI_WORKDIR}/logs"
 GI_LOG_FILE="${GI_LOG_DIR}/install.log"
 GI_DOWNLOAD_DIR="${GI_WORKDIR}/downloads"
 GI_GNUPG_HOME="${GI_WORKDIR}/gnupg"
+# Sysfs roots are overridable so the disk-size fallbacks can be tested without
+# root privileges or real block devices.
+GI_SYS_BLOCK="${GI_SYS_BLOCK:-/sys/block}"
+GI_SYS_CLASS_BLOCK="${GI_SYS_CLASS_BLOCK:-/sys/class/block}"
 
 GI_UI_ACTIVE=0
 GI_ABORTED=0
@@ -27,7 +31,7 @@ GI_RESUME=0
 GI_ASSUME_YES=0
 
 CONFIG_KEYS=(
-    SCHEMA
+    SCHEMA UI_LANGUAGE
     BOOT_MODE DISK_MODE DISK ROOT_FS HOME_FS SWAP_MODE SWAP_MIB HOME_MODE HOME_MIB
     PART_ESP PART_BOOT PART_SWAP PART_ROOT PART_HOME
     FORMAT_ESP FORMAT_BOOT FORMAT_SWAP FORMAT_ROOT FORMAT_HOME
@@ -45,6 +49,23 @@ VALIDATION_ERRORS=()
 UI_RESULT=""
 UI_SECRET=""
 UI_CANCELLED=0
+
+# Small fallback so modules that already call T can be sourced in isolation
+# (unit tests, helper scripts). lib/i18n.sh replaces these functions.
+if ! declare -F T >/dev/null 2>&1; then
+    T() {
+        local fmt=$1 out
+        shift
+        if (($#)); then
+            # shellcheck disable=SC2059
+            printf -v out "$fmt" "$@"
+            printf '%s' "$out"
+        else
+            printf '%s' "$fmt"
+        fi
+    }
+    i18n_text() { printf '%s' "${1:-}"; }
+fi
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -81,16 +102,16 @@ die() {
     if command -v ui_cleanup >/dev/null 2>&1; then
         ui_cleanup || true
     fi
-    printf '\nОшибка: %s\n' "$message" >&2
+    printf '\n%s\n' "$(T 'Error: %s' "$message")" >&2
     if [[ -n ${GI_LOG_FILE:-} && -f ${GI_LOG_FILE:-} ]]; then
-        printf 'Журнал: %s\n' "$GI_LOG_FILE" >&2
+        printf '%s\n' "$(T 'Log: %s' "$GI_LOG_FILE")" >&2
     fi
     exit 1
 }
 
 warn() {
     log_warn "$*"
-    printf 'Внимание: %s\n' "$*" >&2
+    printf '%s\n' "$(T 'Warning: %s' "$*")" >&2
 }
 
 info() {
@@ -206,12 +227,12 @@ is_mounted() {
 
 require_mountpoint() {
     local path=$1
-    is_mounted "$path" || die "точка монтирования не смонтирована: $path"
+    is_mounted "$path" || die "$(T 'mount point is not mounted: %s' "$path")"
 }
 
 require_root() {
     if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
-        die "установщик должен запускаться от root (войдите в Minimal CD и получите root-доступ)"
+        die "$(T 'the installer must run as root (log in to the Minimal CD as root)')"
     fi
 }
 
@@ -221,7 +242,7 @@ init_workdir() {
     log_init
     exec 9>"${GI_WORKDIR}/lock"
     if ! flock -n 9; then
-        die "другой экземпляр установщика уже работает (${GI_WORKDIR}/lock)"
+        die "$(T 'another installer instance is already running (%s)' "${GI_WORKDIR}/lock")"
     fi
 }
 
@@ -231,6 +252,7 @@ init_workdir() {
 
 config_defaults() {
     CFG_SCHEMA=1
+    CFG_UI_LANGUAGE=en
     if [[ -d /sys/firmware/efi ]]; then
         CFG_BOOT_MODE=uefi
     else
@@ -317,7 +339,7 @@ config_save() {
             var="CFG_${key}"
             value=${!var:-}
             if [[ $value == *$'\n'* || $value == *$'\r'* ]]; then
-                die "значение ${key} содержит перевод строки и не может быть сохранено"
+                die "$(T 'the value of %s contains a newline and cannot be saved' "$key")"
             fi
             printf '%s="%s"\n' "$key" "$(config_escape "$value")"
         done
@@ -329,24 +351,24 @@ config_save() {
 
 config_load() {
     local file=$1 line key raw value
-    [[ -f $file ]] || die "файл конфигурации не найден: $file"
+    [[ -f $file ]] || die "$(T 'configuration file not found: %s' "$file")"
     while IFS= read -r line || [[ -n $line ]]; do
         line=${line%$'\r'}
         [[ -z ${line//[[:space:]]/} || $line =~ ^[[:space:]]*# ]] && continue
         if [[ ! $line =~ ^[[:space:]]*([A-Z][A-Z0-9_]*)=\"(([^\"\\]|\\.)*)\"[[:space:]]*(#.*)?$ ]]; then
-            die "некорректная строка конфигурации: $line"
+            die "$(T 'invalid configuration line: %s' "$line")"
         fi
         key=${BASH_REMATCH[1]}
         raw=${BASH_REMATCH[2]}
         if ! config_key_valid "$key"; then
-            die "неизвестный или небезопасный ключ конфигурации: $key"
+            die "$(T 'unknown or unsafe configuration key: %s' "$key")"
         fi
         value=${raw//\\\"/\"}
         value=${value//\\\\/\\}
         printf -v "CFG_${key}" '%s' "$value"
     done <"$file"
     if [[ ${CFG_SCHEMA:-0} != 1 ]]; then
-        die "неподдерживаемая версия конфигурации: ${CFG_SCHEMA:-unknown}"
+        die "$(T 'unsupported configuration version: %s' "${CFG_SCHEMA:-unknown}")"
     fi
     log_info "configuration loaded from $file"
 }
@@ -412,15 +434,15 @@ state_has_progress() {
 
 state_label() {
     case "$1" in
-        disk) printf 'Разметка диска' ;;
-        stage3) printf 'Stage3 и Portage' ;;
-        portage) printf 'Chroot и настройка Portage' ;;
-        kernel) printf 'Ядро Linux' ;;
-        system) printf 'Настройка системы' ;;
-        tools) printf 'Системные службы' ;;
-        bootloader) printf 'Загрузчик GRUB' ;;
-        desktop) printf 'Графическое окружение' ;;
-        finalize) printf 'Завершение' ;;
+        disk) T 'Disk partitioning' ;;
+        stage3) T 'Stage3 and Portage' ;;
+        portage) T 'Chroot and Portage setup' ;;
+        kernel) T 'Linux kernel' ;;
+        system) T 'System configuration' ;;
+        tools) T 'System services' ;;
+        bootloader) T 'GRUB bootloader' ;;
+        desktop) T 'Desktop environment' ;;
+        finalize) T 'Finishing up' ;;
         *) printf '%s' "$1" ;;
     esac
 }
@@ -484,6 +506,6 @@ config_derived() {
 # Run a user-provided command and abort the installation on failure.
 must() {
     if ! "$@"; then
-        die "команда завершилась с ошибкой: $(render_cmd "$@")"
+        die "$(T 'command failed: %s' "$(render_cmd "$@")")"
     fi
 }

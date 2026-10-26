@@ -29,20 +29,20 @@ ui_last_log_line() {
 ui_failure_choice() {
     local label=$1 log=$2 status=$3 key line width
     while :; do
-        ui_header "${C_RED}Ошибка${C_RESET}" "Команда завершилась с кодом ${status}"
+        ui_header "$(T 'Error')" "$(T 'Command exited with code %s' "$status")" "$C_RED"
         printf '  %s%s%s\n\n' "$C_BOLD" "$label" "$C_RESET"
-        printf '  %sПоследние строки журнала:%s\n\n' "$C_DIM" "$C_RESET"
+        printf '  %s%s%s\n\n' "$C_DIM" "$(T 'Last log lines:')" "$C_RESET"
         width=$(( $(ui_width) - 6 ))
         while IFS= read -r line; do
             (( ${#line} > width )) && line="${line:0:width-1}…"
             printf '  %s%s%s\n' "$C_DIM" "$line" "$C_RESET"
         done < <(ui_tail_log "$log" 16)
-        ui_footer "R — повторить · L — полный журнал · A/Esc — прервать"
+        ui_footer "$(T 'R - retry · L - full log · A/Esc - abort')"
         ui_read_key || return 1
         key=$UI_KEY
         case "$key" in
             r|R) return 0 ;;
-            l|L) ui_show_file "Журнал: $log" "$log" ;;
+            l|L) ui_show_file "$(T 'Log: %s' "$log")" "$log" ;;
             a|A|esc|q|Q) return 1 ;;
         esac
     done
@@ -56,15 +56,15 @@ ui_wait_process() {
         width=$(( $(ui_width) - 6 ))
         line=$(ui_last_log_line "$log")
         (( ${#line} > width )) && line="${line:0:width-1}…"
-        ui_header "Выполняется" "$label"
+        ui_header "$(T 'Running')" "$label"
         printf '  %s%c%s  %02d:%02d\n\n' "$C_CYAN$C_BOLD" "${spin:frame%4:1}" "$C_RESET" \
             "$((elapsed / 60))" "$((elapsed % 60))"
         if [[ -n $line ]]; then
             printf '  %s%s%s\n' "$C_DIM" "$line" "$C_RESET"
         else
-            printf '  %sПодготовка…%s\n' "$C_DIM" "$C_RESET"
+            printf '  %s%s%s\n' "$C_DIM" "$(T 'Preparing…')" "$C_RESET"
         fi
-        printf '\n  %sНе выключайте питание. Полный журнал: %s%s\n' "$C_DIM" "$log" "$C_RESET"
+        printf '\n  %s%s %s%s\n' "$C_DIM" "$(T 'Do not power off. Full log:')" "$log" "$C_RESET"
         frame=$((frame + 1))
         sleep 0.35
     done
@@ -154,8 +154,8 @@ ui_interactive() {
     printf '\e[?25l'
     if ((status != 0)); then
         log_error "INTERACTIVE FAILED ($status): $GI_LAST_COMMAND"
-        ui_error "Интерактивная команда завершилась с ошибкой" \
-            "${label}\nКод возврата: ${status}\nЖурнал: ${GI_LAST_LOG}"
+        ui_error "$(T 'Interactive command failed')" \
+            "$(T '%s\nExit code: %s\nLog: %s' "$label" "$status" "$GI_LAST_LOG")"
         return "$status"
     fi
     return 0
@@ -194,7 +194,7 @@ ui_download() {
     fi
 
     while :; do
-        ui_prepare_log "Загрузка: $label"
+        ui_prepare_log "$(T 'Downloading: %s' "$label")"
         local log=$GI_LAST_LOG
         local -a cmd=(curl -fL --retry 2 --retry-delay 3 --connect-timeout 30
             --silent --show-error -o "$dest" "$url")
@@ -222,17 +222,17 @@ ui_download() {
                 percent=0
                 bar=$(ui_progress_bar 1 1 32)
             fi
-            ui_header "Загрузка" "$label"
+            ui_header "$(T 'Downloading')" "$label"
             printf '  %s%s%s\n\n' "$C_DIM" "$url" "$C_RESET"
             if ((expected > 0)); then
                 printf '  %s%s%s %3d%%\n' "$C_GREEN" "$bar" "$C_RESET" "$percent"
-                printf '\n  %s из %s · %s/s\n' \
-                    "$(ui_human_bytes "$size")" "$(ui_human_bytes "$expected")" "$(ui_human_bytes "$bytes_per_sec")"
+                printf '\n  %s\n' "$(T '%s of %s · %s/s' \
+                    "$(ui_human_bytes "$size")" "$(ui_human_bytes "$expected")" "$(ui_human_bytes "$bytes_per_sec")")"
             else
                 printf '  %s%s%s\n' "$C_GREEN" "$bar" "$C_RESET"
-                printf '\n  Скачано: %s · %s/s\n' "$(ui_human_bytes "$size")" "$(ui_human_bytes "$bytes_per_sec")"
+                printf '\n  %s %s · %s/s\n' "$(T 'Downloaded:')" "$(ui_human_bytes "$size")" "$(ui_human_bytes "$bytes_per_sec")"
             fi
-            printf '\n  %sФайл: %s%s\n' "$C_DIM" "$dest" "$C_RESET"
+            printf '\n  %s%s %s%s\n' "$C_DIM" "$(T 'File:')" "$dest" "$C_RESET"
             sleep 0.5
         done
         wait "$pid" || status=$?
@@ -263,14 +263,14 @@ ui_download() {
         fi
         if ((status == 0 && expected > 0 && size != expected)); then
             status=1
-            printf 'Размер файла %s не совпадает с ожидаемым %s\n' "$size" "$expected" >>"$log"
+            printf 'File size %s does not match expected %s\n' "$size" "$expected" >>"$log"
         fi
         if ((status == 0 && expected == 0 && size == 0)); then
             status=1
-            printf 'Сервер вернул пустой файл\n' >>"$log"
+            printf 'Server returned an empty file\n' >>"$log"
         fi
         log_error "download failed ($status): $url"
-        if ! ui_failure_choice "Загрузка: $label" "$log" "$status"; then
+        if ! ui_failure_choice "$(T 'Downloading: %s' "$label")" "$log" "$status"; then
             GI_ABORTED=1
             return 1
         fi

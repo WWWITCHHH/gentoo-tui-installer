@@ -12,19 +12,19 @@ chroot_mount() {
     ensure_dir "$GI_ROOT/proc" "$GI_ROOT/sys" "$GI_ROOT/dev" "$GI_ROOT/run"
 
     if ! is_mounted "$GI_ROOT/proc"; then
-        ui_run "Монтирование /proc" mount --types proc proc "$GI_ROOT/proc" || return 1
+        ui_run "$(T 'Mounting /proc')" mount --types proc proc "$GI_ROOT/proc" || return 1
     fi
     if ! is_mounted "$GI_ROOT/sys"; then
-        ui_run "Монтирование /sys" mount --rbind /sys "$GI_ROOT/sys" || return 1
-        ui_run "Настройка /sys" mount --make-rslave "$GI_ROOT/sys" || return 1
+        ui_run "$(T 'Mounting /sys')" mount --rbind /sys "$GI_ROOT/sys" || return 1
+        ui_run "$(T 'Configuring /sys')" mount --make-rslave "$GI_ROOT/sys" || return 1
     fi
     if ! is_mounted "$GI_ROOT/dev"; then
-        ui_run "Монтирование /dev" mount --rbind /dev "$GI_ROOT/dev" || return 1
-        ui_run "Настройка /dev" mount --make-rslave "$GI_ROOT/dev" || return 1
+        ui_run "$(T 'Mounting /dev')" mount --rbind /dev "$GI_ROOT/dev" || return 1
+        ui_run "$(T 'Configuring /dev')" mount --make-rslave "$GI_ROOT/dev" || return 1
     fi
     if ! is_mounted "$GI_ROOT/run"; then
-        ui_run "Монтирование /run" mount --bind /run "$GI_ROOT/run" || return 1
-        ui_run "Настройка /run" mount --make-slave "$GI_ROOT/run" || return 1
+        ui_run "$(T 'Mounting /run')" mount --bind /run "$GI_ROOT/run" || return 1
+        ui_run "$(T 'Configuring /run')" mount --make-slave "$GI_ROOT/run" || return 1
     fi
     return 0
 }
@@ -39,23 +39,26 @@ chroot_unmount() {
     return 0
 }
 
+# The UI locale is deliberately not passed into the target system: the chroot
+# may not have that locale generated yet, and locale warnings would pollute
+# package-manager output. LC_ALL=C also makes captured values stable.
 chroot_run() {
     local label=$1
     shift
     local line
     line=$(render_cmd "$@")
-    ui_run "$label" chroot "$GI_ROOT" /bin/bash -lc "$line"
+    ui_run "$label" env LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc "$line"
 }
 
 chroot_shell() {
     local label=$1 script=$2
-    ui_run "$label" chroot "$GI_ROOT" /bin/bash -lc "$script"
+    ui_run "$label" env LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc "$script"
 }
 
 chroot_capture() {
     local script
     script=$(render_cmd "$@")
-    chroot "$GI_ROOT" /bin/bash -lc "$script" 2>/dev/null || true
+    LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc "$script" 2>/dev/null || true
 }
 
 portage_make_jobs() {
@@ -70,10 +73,10 @@ portage_write_resolv() {
     ensure_dir "$GI_ROOT/etc"
     if [[ -f /etc/resolv.conf ]]; then
         cp -L -- /etc/resolv.conf "$GI_ROOT/etc/resolv.conf" ||
-            die "не удалось скопировать /etc/resolv.conf в chroot"
+            die "$(T 'failed to copy /etc/resolv.conf into the chroot')"
         log_info "resolv.conf copied into chroot"
     else
-        warn "/etc/resolv.conf отсутствует: сеть внутри chroot может не работать"
+        warn "$(T '/etc/resolv.conf is missing: networking inside the chroot may not work')"
     fi
 }
 
@@ -129,20 +132,20 @@ EOF
 }
 
 portage_sync() {
-    ui_run "Первичная синхронизация Portage (emerge-webrsync)" \
-        chroot "$GI_ROOT" /bin/bash -lc 'emerge-webrsync' || return 1
+    ui_run "$(T 'Initial Portage sync (emerge-webrsync)')" \
+        env LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc 'emerge-webrsync' || return 1
     log_info "portage tree synced"
 }
 
 portage_detect_cpu_flags() {
     local output flags
     [[ $CFG_CPU_FLAGS == yes ]] || return 0
-    ui_run "Установка cpuid2cpuflags" \
-        chroot "$GI_ROOT" /bin/bash -lc 'emerge --ask=n --quiet app-portage/cpuid2cpuflags' || return 1
+    ui_run "$(T 'Installing cpuid2cpuflags')" \
+        env LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc 'emerge --ask=n --quiet app-portage/cpuid2cpuflags' || return 1
     output=$(chroot_capture cpuid2cpuflags)
     flags=$(printf '%s\n' "$output" | sed -n 's/^CPU_FLAGS_X86:[[:space:]]*//p' | head -n 1)
     if [[ -z $flags ]]; then
-        warn "cpuid2cpuflags не вернул CPU_FLAGS_X86; продолжаю без оптимизации CPU_FLAGS"
+        warn "$(T 'cpuid2cpuflags returned no CPU_FLAGS_X86; continuing without CPU-specific flags')"
         return 0
     fi
     PORTAGE_CPU_FLAGS=$flags
@@ -168,7 +171,7 @@ portage_select_profile() {
     local list pattern line number path selected="" current=""
     list=$(chroot_capture eselect profile list)
     if [[ -z $list ]]; then
-        warn "eselect profile list не вернул список профилей; профиль не изменён"
+        warn "$(T 'eselect profile list returned nothing; the profile was not changed')"
         return 0
     fi
     pattern=$(portage_profile_pattern)
@@ -183,35 +186,35 @@ portage_select_profile() {
     done <<<"$list"
     current=$(chroot_capture eselect profile show | sed -n 's/^Current profile: //p' | head -n 1)
     if [[ -z $selected ]]; then
-        warn "подходящий профиль (${CFG_PROFILE}, ${CFG_INIT}) не найден; остаётся ${current:-текущий}"
+        warn "$(T 'no matching profile (%s, %s) was found; keeping %s' "$CFG_PROFILE" "$CFG_INIT" "${current:-$(T 'the current profile')}")"
         return 0
     fi
     if [[ -n $current && $current == "$(printf '%s\n' "$list" | awk -v n="$selected" '$0 ~ "\\[" n "\\]" {print $2; exit}')" ]]; then
         log_info "profile already selected: $current"
         return 0
     fi
-    chroot_run "Выбор профиля Portage" eselect profile set "$selected" || return 1
-    chroot_run "Обновление окружения" env-update || return 1
+    chroot_run "$(T 'Selecting the Portage profile')" eselect profile set "$selected" || return 1
+    chroot_run "$(T 'Updating the environment')" env-update || return 1
     log_info "profile selected: $CFG_PROFILE / $CFG_INIT (${selected})"
     return 0
 }
 
 portage_update_world() {
     [[ $CFG_UPDATE_WORLD == yes ]] || return 0
-    ui_header "Обновление @world" \
-        "Это может занять от десятков минут до нескольких часов. Не выключайте питание."
-    ui_pause "Enter — начать обновление · Esc — пропустить"
+    ui_header "$(T 'Updating @world')" \
+        "$(T 'This can take from tens of minutes to several hours. Do not power off.')"
+    ui_pause "$(T 'Enter - start the update · Esc - skip')"
     [[ $UI_KEY != esc ]] || return 0
-    chroot_run "Обновление @world" \
+    chroot_run "$(T 'Updating @world')" \
         emerge --ask=n --update --deep --newuse @world || return 1
-    chroot_run "Обновление окружения" env-update || return 1
+    chroot_run "$(T 'Updating the environment')" env-update || return 1
     log_info "world updated"
 }
 
 step_portage() {
     require_mountpoint "$GI_ROOT"
     [[ -f "$GI_ROOT/etc/os-release" ]] || {
-        ui_error "Stage3 не установлен" "В ${GI_ROOT} нет /etc/os-release. Сначала выполните этап stage3."
+        ui_error "$(T 'Stage3 is not installed')" "$(T 'There is no /etc/os-release in %s. Run the Stage3 step first.' "$GI_ROOT")"
         return 1
     }
     chroot_mount || return 1
@@ -225,7 +228,7 @@ step_portage() {
     fi
     portage_select_profile || return 1
     portage_update_world || return 1
-    chroot_run "Обновление окружения" env-update || return 1
+    chroot_run "$(T 'Updating the environment')" env-update || return 1
     config_save
     log_info "portage step finished"
 }

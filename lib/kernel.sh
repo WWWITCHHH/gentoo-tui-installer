@@ -41,22 +41,21 @@ kernel_cpu_vendor() {
 }
 
 kernel_install_initramfs_tools() {
-    chroot_run "Установка installkernel и dracut" \
+    chroot_run "$(T 'Installing installkernel and dracut')" \
         emerge --ask=n --quiet sys-kernel/installkernel sys-kernel/dracut || return 1
 }
 
 kernel_install_firmware() {
     [[ $CFG_FIRMWARE == yes ]] || return 0
-    ui_header "Прошивки устройств" \
-        "Пакет sys-kernel/linux-firmware содержит прошивки для Wi-Fi, GPU и других устройств.
-Он занимает сотни мегабайт. Установка может занять время."
-    ui_pause "Enter — установить · Esc — пропустить"
+    ui_header "$(T 'Device firmware')" \
+        "$(T 'The sys-kernel/linux-firmware package contains firmware for Wi-Fi, GPUs and other devices.\nIt is hundreds of megabytes and installation may take a while.')"
+    ui_pause "$(T 'Enter - install · Esc - skip')"
     if [[ $UI_KEY == esc ]]; then
         CFG_FIRMWARE=no
-        warn "установка linux-firmware пропущена пользователем"
+        warn "$(T 'linux-firmware installation was skipped by the user')"
         return 0
     fi
-    chroot_run "Установка linux-firmware" \
+    chroot_run "$(T 'Installing linux-firmware')" \
         emerge --ask=n --quiet sys-kernel/linux-firmware || return 1
 }
 
@@ -73,11 +72,11 @@ kernel_install_microcode() {
             return 0
             ;;
         *)
-            warn "неизвестный режим микрокода: $mode"
+            warn "$(T 'unknown microcode mode: %s' "$mode")"
             return 0
             ;;
     esac
-    chroot_run "Установка микрокода (${mode})" emerge --ask=n --quiet "$package" || return 1
+    chroot_run "$(T 'Installing microcode (%s)' "$mode")" emerge --ask=n --quiet "$package" || return 1
 }
 
 kernel_verify() {
@@ -85,24 +84,24 @@ kernel_verify() {
     kernels=$(find "$GI_ROOT/boot" -maxdepth 1 -type f \
         \( -name 'vmlinuz-*' -o -name 'kernel-*' \) -printf '%f\n' 2>/dev/null | sort || true)
     if [[ -z $kernels ]]; then
-        ui_error "Ядро не установлено" "В ${GI_ROOT}/boot не найдено ни vmlinuz-*, ни kernel-*."
+        ui_error "$(T 'Kernel is not installed')" "$(T 'Neither vmlinuz-* nor kernel-* was found in %s/boot.' "$GI_ROOT")"
         return 1
     fi
     initrds=$(find "$GI_ROOT/boot" -maxdepth 1 -type f \
         \( -name 'initrd-*' -o -name 'initramfs-*' -o -name 'initrd.img-*' \) -printf '%f\n' 2>/dev/null | sort || true)
     if [[ -z $initrds ]]; then
-        warn "initramfs не найден; пробую сгенерировать через dracut"
+        warn "$(T 'initramfs not found; trying to generate one with dracut')"
         kver=$(find "$GI_ROOT/lib/modules" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null |
             sort -V | tail -n 1 || true)
         if [[ -z $kver ]]; then
-            ui_error "Нет модулей ядра" "Каталог ${GI_ROOT}/lib/modules пуст."
+            ui_error "$(T 'No kernel modules')" "$(T 'The directory %s/lib/modules is empty.' "$GI_ROOT")"
             return 1
         fi
-        chroot_run "Генерация initramfs для ${kver}" dracut --force --kver "$kver" || return 1
+        chroot_run "$(T 'Generating initramfs for %s' "$kver")" dracut --force --kver "$kver" || return 1
         initrds=$(find "$GI_ROOT/boot" -maxdepth 1 -type f \
             \( -name 'initrd-*' -o -name 'initramfs-*' \) -printf '%f\n' 2>/dev/null | sort || true)
         if [[ -z $initrds ]]; then
-            ui_error "initramfs не создан" "dracut завершился без ошибки, но файл initramfs не найден."
+            ui_error "$(T 'initramfs was not created')" "$(T 'dracut exited successfully, but no initramfs file was found.')"
             return 1
         fi
     fi
@@ -112,49 +111,46 @@ kernel_verify() {
 }
 
 kernel_install_binary() {
-    chroot_run "Установка gentoo-kernel-bin" \
+    chroot_run "$(T 'Installing gentoo-kernel-bin')" \
         emerge --ask=n --quiet sys-kernel/gentoo-kernel-bin || return 1
 }
 
 kernel_install_distribution() {
-    ui_header "Сборка ядра" \
-        "Будет собран sys-kernel/gentoo-kernel с конфигурацией Gentoo.
-Сборка может занять от нескольких минут до часа."
-    ui_pause "Enter — начать сборку"
-    chroot_run "Сборка gentoo-kernel" \
+    ui_header "$(T 'Building the kernel')" \
+        "$(T 'sys-kernel/gentoo-kernel will be built with the Gentoo configuration.\nThe build can take from a few minutes to an hour.')"
+    ui_pause "$(T 'Enter - start the build')"
+    chroot_run "$(T 'Building gentoo-kernel')" \
         emerge --ask=n --quiet sys-kernel/gentoo-kernel || return 1
 }
 
 kernel_install_manual() {
     local jobs cmd
-    chroot_run "Установка зависимостей сборки ядра" \
+    chroot_run "$(T 'Installing kernel build dependencies')" \
         emerge --ask=n --quiet sys-devel/bc sys-devel/flex sys-devel/bison \
         dev-libs/elfutils sys-libs/ncurses dev-util/pahole dev-libs/openssl || return 1
-    chroot_run "Установка исходников ядра" \
+    chroot_run "$(T 'Installing kernel sources')" \
         emerge --ask=n --quiet sys-kernel/gentoo-sources || return 1
-    chroot_run "Выбор исходников ядра" eselect kernel set 1 || return 1
+    chroot_run "$(T 'Selecting kernel sources')" eselect kernel set 1 || return 1
 
-    ui_header "Конфигурация ядра" \
-        "Сейчас откроется make menuconfig. Включите драйверы для своего оборудования.
-Сохраните конфигурацию и выйдите из menuconfig, чтобы продолжить."
-    ui_pause "Enter — открыть menuconfig · Esc — отмена"
+    ui_header "$(T 'Kernel configuration')" \
+        "$(T 'make menuconfig will open now. Enable drivers for your hardware.\nSave the configuration and exit menuconfig to continue.')"
+    ui_pause "$(T 'Enter - open menuconfig · Esc - cancel')"
     [[ $UI_KEY != esc ]] || return 1
-    ui_interactive "make menuconfig" chroot "$GI_ROOT" /bin/bash -lc \
-        'cd /usr/src/linux && make menuconfig' || return 1
+    ui_interactive "make menuconfig" env LC_ALL=C LANG=C chroot "$GI_ROOT" \
+        /bin/bash -lc 'cd /usr/src/linux && make menuconfig' || return 1
 
     jobs=$(portage_make_jobs)
     cmd="cd /usr/src/linux && make -j${jobs} && make modules_install && make install"
-    ui_header "Сборка ядра" \
-        "make -j${jobs}, затем modules_install и install.
-Это самый длительный этап установки."
-    ui_pause "Enter — начать сборку"
-    chroot_shell "Сборка и установка ядра" "$cmd" || return 1
+    ui_header "$(T 'Building the kernel')" \
+        "$(T 'make -j%s, then modules_install and install.\nThis is the longest installation step.' "$jobs")"
+    ui_pause "$(T 'Enter - start the build')"
+    chroot_shell "$(T 'Building and installing the kernel')" "$cmd" || return 1
 }
 
 step_kernel() {
     require_mountpoint "$GI_ROOT"
     [[ -f "$GI_ROOT/etc/os-release" ]] || {
-        ui_error "Нет базовой системы" "Сначала выполните этапы stage3 и Portage."
+        ui_error "$(T 'No base system')" "$(T 'Run the Stage3 and Portage steps first.')"
         return 1
     }
     chroot_mount || return 1
@@ -167,7 +163,7 @@ step_kernel() {
         bin) kernel_install_binary || return 1 ;;
         dist) kernel_install_distribution || return 1 ;;
         manual) kernel_install_manual || return 1 ;;
-        *) die "неизвестный режим ядра: $CFG_KERNEL_MODE" ;;
+        *) die "$(T 'unknown kernel mode: %s' "$CFG_KERNEL_MODE")" ;;
     esac
     kernel_verify || return 1
     config_save

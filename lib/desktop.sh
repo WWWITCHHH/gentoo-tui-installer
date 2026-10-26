@@ -9,7 +9,7 @@ desktop_label() {
     case "${CFG_DESKTOP:-none}" in
         xfce) printf 'XFCE' ;;
         gnome) printf 'GNOME' ;;
-        *) printf 'без графической среды' ;;
+        *) T 'no desktop environment' ;;
     esac
 }
 
@@ -60,8 +60,8 @@ desktop_write_display_manager() {
     [[ -n $dm ]] || return 0
 
     if [[ $CFG_INIT == systemd ]]; then
-        chroot_run "Включение ${dm}.service" systemctl enable "${dm}.service" || return 1
-        chroot_run "Графическая цель systemd" systemctl set-default graphical.target || return 1
+        chroot_run "$(T 'Enabling %s.service' "$dm")" systemctl enable "${dm}.service" || return 1
+        chroot_run "$(T 'Setting the systemd graphical target')" systemctl set-default graphical.target || return 1
         return 0
     fi
 
@@ -74,13 +74,12 @@ desktop_write_display_manager() {
     } | write_file_atomic "$conf" 0644
 
     if [[ -e "$GI_ROOT/etc/init.d/display-manager" ]]; then
-        chroot_run "Включение display-manager" rc-update add display-manager default || return 1
+        chroot_run "$(T 'Enabling display-manager')" rc-update add display-manager default || return 1
     elif [[ -e "$GI_ROOT/etc/init.d/$dm" ]]; then
-        chroot_run "Включение службы ${dm}" rc-update add "$dm" default || return 1
+        chroot_run "$(T 'Enabling service %s' "$dm")" rc-update add "$dm" default || return 1
     else
-        ui_error "Служба дисплей-менеджера не найдена" \
-            "Ожидался ${GI_ROOT}/etc/init.d/display-manager или ${GI_ROOT}/etc/init.d/${dm}.
-Проверьте установку gui-libs/display-manager-init."
+        ui_error "$(T 'Display manager service not found')" \
+            "$(T 'Expected %s/etc/init.d/display-manager or %s/etc/init.d/%s.\nCheck the gui-libs/display-manager-init installation.' "$GI_ROOT" "$GI_ROOT" "$dm")"
         return 1
     fi
     return 0
@@ -91,7 +90,7 @@ desktop_configure_openrc() {
     while read -r service runlevel; do
         [[ -n $service ]] || continue
         if [[ -e "$GI_ROOT/etc/init.d/$service" ]]; then
-            chroot_run "Включение службы ${service}" \
+            chroot_run "$(T 'Enabling service %s' "$service")" \
                 rc-update add "$service" "$runlevel" || return 1
         else
             log_warn "OpenRC service not installed: ${service}"
@@ -109,7 +108,7 @@ desktop_add_user_groups() {
         fi
     done
     [[ -n $group_list ]] || return 0
-    chroot_run "Добавление ${CFG_USERNAME} в группы графической среды" \
+    chroot_run "$(T 'Adding %s to desktop groups' "$CFG_USERNAME")" \
         usermod -aG "$group_list" "$CFG_USERNAME" || return 1
     log_info "desktop groups for $CFG_USERNAME: $group_list"
     return 0
@@ -118,28 +117,25 @@ desktop_add_user_groups() {
 desktop_intro() {
     local label body
     label=$(desktop_label)
-    body="Будут установлены Xorg и ${label}."
+    body="$(T 'Xorg and %s will be installed.' "$label")"
     case "$CFG_DESKTOP" in
         xfce)
-            body+=" XFCE использует LightDM в качестве дисплей-менеджера."
+            body+=" $(T 'XFCE uses LightDM as its display manager.')"
             ;;
         gnome)
-            body+=" GNOME использует GDM и требует много места; установка может занять несколько часов."
+            body+=" $(T 'GNOME uses GDM and requires a lot of space; installation may take several hours.')"
             ;;
     esac
-    body+="
-
-Убедитесь, что в CFLAGS нет неподходящих оптимизаций, а в VIDEO_CARDS заданы
-драйверы GPU: при пустом VIDEO_CARDS Xorg может работать без ускорения."
-    ui_header "Графическое окружение: ${label}" "$body"
-    ui_pause "Enter — установить графическую среду"
+    body+=$'\n\n'"$(T 'Make sure CFLAGS contains no unsuitable optimizations and VIDEO_CARDS lists\nyour GPU drivers: with empty VIDEO_CARDS, Xorg may run without acceleration.')"
+    ui_header "$(T 'Desktop environment: %s' "$label")" "$body"
+    ui_pause "$(T 'Enter - install the desktop environment')"
 }
 
 desktop_install_packages() {
     local -a packages=()
     mapfile -t packages < <(desktop_packages)
     ((${#packages[@]})) || return 0
-    chroot_run "Установка ${CFG_DESKTOP}" \
+    chroot_run "$(T 'Installing %s' "$CFG_DESKTOP")" \
         emerge --ask=n --quiet "${packages[@]}" || return 1
     return 0
 }
@@ -150,8 +146,8 @@ desktop_verify() {
     [[ -n $dm ]] || return 0
 
     if [[ ! -e "$GI_ROOT/usr/bin/Xorg" && ! -e "$GI_ROOT/usr/bin/X" ]]; then
-        ui_error "Xorg не установлен" \
-            "В ${GI_ROOT}/usr/bin нет Xorg. Проверьте журнал установки Xorg."
+        ui_error "$(T 'Xorg is not installed')" \
+            "$(T 'There is no Xorg in %s/usr/bin. Check the Xorg installation log.' "$GI_ROOT")"
         return 1
     fi
 
@@ -161,22 +157,22 @@ desktop_verify() {
         *) session="" ;;
     esac
     if [[ -n $session && ! -e $session ]]; then
-        ui_error "Сеанс ${CFG_DESKTOP} не установлен" \
-            "Не найден ${session}. Проверьте журнал установки графической среды."
+        ui_error "$(T 'The %s session is not installed' "$CFG_DESKTOP")" \
+            "$(T '%s was not found. Check the desktop installation log.' "$session")"
         return 1
     fi
 
     if [[ ! -e "$GI_ROOT/usr/sbin/$dm" && ! -e "$GI_ROOT/usr/bin/$dm" ]]; then
-        ui_error "Дисплей-менеджер не установлен" \
-            "Не найден ${dm} в ${GI_ROOT}/usr/sbin или ${GI_ROOT}/usr/bin."
+        ui_error "$(T 'Display manager is not installed')" \
+            "$(T '%s was not found in %s/usr/sbin or %s/usr/bin.' "$dm" "$GI_ROOT" "$GI_ROOT")"
         return 1
     fi
 
     if [[ $CFG_INIT == openrc ]]; then
         if [[ ! -e "$GI_ROOT/etc/init.d/display-manager" &&
             ! -e "$GI_ROOT/etc/init.d/$dm" ]]; then
-            ui_error "Служба дисплей-менеджера не установлена" \
-                "Не найден init-скрипт display-manager или ${dm}."
+            ui_error "$(T 'Display manager service is not installed')" \
+                "$(T 'The display-manager or %s init script was not found.' "$dm")"
             return 1
         fi
     fi
@@ -191,7 +187,7 @@ step_desktop() {
     fi
     require_mountpoint "$GI_ROOT"
     [[ -f "$GI_ROOT/etc/os-release" ]] || {
-        ui_error "Нет базовой системы" "Сначала выполните этапы stage3 и Portage."
+        ui_error "$(T 'No base system')" "$(T 'Run the Stage3 and Portage steps first.')"
         return 1
     }
     chroot_mount || return 1

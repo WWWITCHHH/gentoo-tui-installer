@@ -20,21 +20,58 @@ discover_disks() {
     done < <(lsblk -dpno NAME,TYPE 2>/dev/null | sort)
 }
 
+# Prints the size of a block device in bytes. KVM/QEMU virtio disks and some
+# minimal live environments return an empty or zero result from blockdev, so
+# use lsblk and sysfs as validated fallbacks instead of treating that as 0 MiB.
+disk_size_bytes() {
+    local disk=$1 name bytes="" sectors="" path
+    name=${disk##*/}
+
+    if command_exists blockdev; then
+        bytes=$(blockdev --getsize64 -- "$disk" 2>/dev/null || true)
+        bytes=${bytes//[[:space:]]/}
+    fi
+    if [[ ! $bytes =~ ^[0-9]+$ ]] || ((bytes <= 0)); then
+        bytes=$(lsblk -bndo SIZE -- "$disk" 2>/dev/null | head -n 1 | tr -d '[:space:]' || true)
+    fi
+    if [[ ! $bytes =~ ^[0-9]+$ ]] || ((bytes <= 0)); then
+        for path in "${GI_SYS_BLOCK:-/sys/block}/${name}/size" \
+            "${GI_SYS_CLASS_BLOCK:-/sys/class/block}/${name}/size"; do
+            [[ -r $path ]] || continue
+            sectors=$(<"$path")
+            sectors=${sectors//[[:space:]]/}
+            if [[ $sectors =~ ^[0-9]+$ ]] && ((sectors > 0)); then
+                bytes=$((sectors * 512))
+                break
+            fi
+        done
+    fi
+    if [[ ! $bytes =~ ^[0-9]+$ ]] || ((bytes <= 0)); then
+        return 1
+    fi
+    printf '%s\n' "$bytes"
+}
+
 disk_size_mib() {
-    local disk=$1 bytes
-    bytes=$(blockdev --getsize64 -- "$disk" 2>/dev/null) || return 1
-    printf '%d' "$((bytes / 1024 / 1024))"
+    local disk=$1 bytes mib
+    bytes=$(disk_size_bytes "$disk") || return 1
+    mib=$((bytes / 1024 / 1024))
+    # A device smaller than 1 MiB is never a usable installation target.
+    ((mib > 0)) || return 1
+    printf '%d' "$mib"
 }
 
 disk_model() {
     local model
     model=$(lsblk -dno MODEL -- "$1" 2>/dev/null || true)
-    trim "${model:-неизвестно}"
+    trim "${model:-unknown}"
 }
 
 disk_is_removable() {
-    local name=${1##*/} value=0
-    [[ -r /sys/block/${name}/removable ]] && read -r value <"/sys/block/${name}/removable" || true
+    local name=${1##*/} value=0 path
+    path="${GI_SYS_BLOCK:-/sys/block}/${name}/removable"
+    [[ -r $path ]] || path="${GI_SYS_CLASS_BLOCK:-/sys/class/block}/${name}/removable"
+    [[ -r $path ]] && read -r value <"$path" || true
     [[ $value == 1 ]]
 }
 
@@ -51,7 +88,7 @@ _plan_add() {
     local role=$1 size=$2 fstype=$3 mount=$4 label=$5
     local start end num
     if ((size <= 0)); then
-        PLAN_ERROR="размер раздела ${role} должен быть больше нуля"
+        PLAN_ERROR="$(T 'Partition size for %s must be greater than zero.' "$role")"
         return 1
     fi
     if ((PLAN_COUNT == 0)); then
@@ -61,7 +98,7 @@ _plan_add() {
     fi
     end=$((start + size))
     if ((end > PLAN_TOTAL_MIB - 1)); then
-        PLAN_ERROR="раздел ${role} не помещается на диск"
+        PLAN_ERROR="$(T 'Partition %s does not fit on the disk.' "$role")"
         return 1
     fi
     num=$((PLAN_COUNT + 1))
@@ -85,12 +122,16 @@ disk_plan_build() {
     local root_size home_start i
     plan_reset
     PLAN_TOTAL_MIB=$disk_mib
+    if ((disk_mib <= 0)); then
+        PLAN_ERROR="$(T 'unable to determine disk size')"
+        return 1
+    fi
     if ((disk_mib < 4096)); then
-        PLAN_ERROR="диск слишком мал (${disk_mib} MiB)"
+        PLAN_ERROR="$(T 'Disk is too small (%s MiB).' "$disk_mib")"
         return 1
     fi
     if [[ $boot_mode == bios ]] && ((disk_mib > 2097152)); then
-        PLAN_ERROR="BIOS + MBR не поддерживает диски больше 2 TiB"
+        PLAN_ERROR="$(T 'BIOS + MBR does not support disks larger than 2 TiB.')"
         return 1
     fi
 
@@ -98,12 +139,12 @@ disk_plan_build() {
         auto) swap_mib=$(suggest_swap_mib) ;;
         none) swap_mib=0 ;;
         custom) swap_mib=${CFG_SWAP_MIB:-0} ;;
-        *) PLAN_ERROR="неизвестный режим swap"; return 1 ;;
+        *) PLAN_ERROR="$(T 'unknown swap mode')"; return 1 ;;
     esac
     if [[ $CFG_HOME_MODE == separate ]]; then
         home_mib=${CFG_HOME_MIB:-0}
         if ((home_mib <= 0)); then
-            PLAN_ERROR="размер /home должен быть больше нуля"
+            PLAN_ERROR="$(T '/home size must be greater than zero.')"
             return 1
         fi
     fi
@@ -115,7 +156,7 @@ disk_plan_build() {
     elif [[ $boot_mode == bios ]]; then
         _plan_add boot 1024 "$CFG_BOOT_FS" /boot "boot" || return 1
     else
-        PLAN_ERROR="неизвестный режим загрузки"
+        PLAN_ERROR="$(T 'unknown boot mode')"
         return 1
     fi
     if ((swap_mib > 0)); then
@@ -128,7 +169,7 @@ disk_plan_build() {
         home_start=$((PLAN_TOTAL_MIB - 1 - home_mib))
         root_size=$((home_start - 1 - fixed_used))
         if ((root_size < min_root)); then
-            PLAN_ERROR="root меньше ${min_root} MiB; уменьшите swap или /home"
+            PLAN_ERROR="$(T 'Root would be smaller than %s MiB; reduce swap or /home.' "$min_root")"
             return 1
         fi
         _plan_add root "$root_size" "$CFG_ROOT_FS" / "root" || return 1
@@ -140,7 +181,7 @@ disk_plan_build() {
         done
         root_size=$((PLAN_TOTAL_MIB - 1 - used))
         if ((root_size < min_root)); then
-            PLAN_ERROR="root меньше ${min_root} MiB; уменьшите swap"
+            PLAN_ERROR="$(T 'Root would be smaller than %s MiB; reduce swap.' "$min_root")"
             return 1
         fi
         _plan_add root "$root_size" "$CFG_ROOT_FS" / "root" || return 1
@@ -155,8 +196,8 @@ plan_partition_path() {
 
 disk_plan_print() {
     local i path
-    printf 'Схема: %s\n' "$([[ $CFG_BOOT_MODE == uefi ]] && printf 'UEFI + GPT' || printf 'BIOS + MBR')"
-    printf 'Диск:  %s (%s, %s)\n' "$CFG_DISK" "$(disk_model "$CFG_DISK")" "$(human_mib "$PLAN_TOTAL_MIB")"
+    printf '%s\n' "$(T 'Scheme: %s' "$([[ $CFG_BOOT_MODE == uefi ]] && printf 'UEFI + GPT' || printf 'BIOS + MBR')")"
+    printf '%s\n' "$(T 'Disk:  %s (%s, %s)' "$CFG_DISK" "$(disk_model "$CFG_DISK")" "$(human_mib "$PLAN_TOTAL_MIB")")"
     printf '\n'
     for ((i = 0; i < PLAN_COUNT; i++)); do
         path=$(plan_partition_path "$i")
@@ -165,13 +206,13 @@ disk_plan_print() {
             "$(human_mib "${PLAN_SIZE[$i]}")" "${PLAN_MOUNT[$i]/none/—}"
     done
     printf '\n'
-    printf 'Изменения уничтожат ВСЕ данные на %s.\n' "$CFG_DISK"
+    printf '%s\n' "$(T 'Changes will destroy ALL data on %s.' "$CFG_DISK")"
 }
 
 disk_plan_markdown() {
     local i path
-    printf '## План разметки\n\n'
-    printf '| Раздел | Роль | ФС | Размер | Точка монтирования |\n'
+    printf '## %s\n\n' "$(T 'Partition plan')"
+    printf '| %s | %s | %s | %s | %s |\n' "$(T 'Partition')" "$(T 'Role')" "$(T 'FS')" "$(T 'Size')" "$(T 'Mount point')"
     printf '|---|---|---|---:|---|\n'
     for ((i = 0; i < PLAN_COUNT; i++)); do
         path=$(plan_partition_path "$i")
@@ -184,22 +225,30 @@ disk_plan_markdown() {
 
 disks_select_disk() {
     local -a entries=() tags=() labels=()
-    local disk size model transport removable label default=""
+    local disk size size_mib size_note model transport removable label default=""
     mapfile -t entries < <(discover_disks)
     ((${#entries[@]} > 0)) || return 1
     for disk in "${entries[@]}"; do
-        size=$(lsblk -dno SIZE -- "$disk" 2>/dev/null | xargs)
+        if size_mib=$(disk_size_mib "$disk" 2>/dev/null); then
+            size_note=$(human_mib "$size_mib")
+        else
+            size_note=$(T 'size unknown')
+            size_mib=0
+        fi
+        size=$(lsblk -dno SIZE -- "$disk" 2>/dev/null | xargs || true)
+        size=${size:-$size_note}
         model=$(disk_model "$disk")
-        transport=$(lsblk -dno TRAN -- "$disk" 2>/dev/null | xargs)
+        transport=$(lsblk -dno TRAN -- "$disk" 2>/dev/null | xargs || true)
         removable=""
-        disk_is_removable "$disk" && removable=" · съёмный"
+        disk_is_removable "$disk" && removable=" · $(T 'removable')"
         label="${disk} — ${size} · ${model}${transport:+ · $transport}${removable}"
         tags+=("$disk")
-        labels+=("${disk}|${label}|$(human_mib "$(disk_size_mib "$disk")")")
+        labels+=("${disk}|${label}|${size_note}")
         [[ $disk == "$CFG_DISK" ]] && default=$disk
     done
     [[ -z $default ]] && default=${tags[0]}
-    if ui_menu "Целевой диск" "Все разделы и подписи на выбранном диске будут уничтожены" \
+    if ui_menu "$(T 'Target disk')" \
+        "$(T 'All partitions and signatures on the selected disk will be destroyed')" \
         "$default" "${labels[@]}"; then
         CFG_DISK=$UI_RESULT
         return 0
@@ -215,12 +264,12 @@ disks_disk_mounted() {
 
 disks_check_target() {
     if ! validate_disk_device "$CFG_DISK" 2>/dev/null; then
-        ui_error "Некорректный диск" "$VALIDATION_MESSAGE"
+        ui_error "$(T 'Invalid disk')" "$VALIDATION_MESSAGE"
         return 1
     fi
     if disks_disk_mounted; then
-        ui_error "Диск уже используется" \
-            "На ${CFG_DISK} есть смонтированные разделы. Размонтируйте их перед установкой."
+        ui_error "$(T 'Disk is already in use')" \
+            "$(T 'Mounted partitions exist on %s. Unmount them before installing.' "$CFG_DISK")"
         return 1
     fi
     local swaps
@@ -228,7 +277,7 @@ disks_check_target() {
         grep -q "^/dev/${name}[[:space:]]" /proc/swaps 2>/dev/null && printf '%s\n' "$name"
     done)
     if [[ -n $swaps ]]; then
-        ui_error "Активный swap" "Отключите swap на ${CFG_DISK}: swapoff -a"
+        ui_error "$(T 'Active swap')" "$(T 'Disable swap on %s: swapoff -a' "$CFG_DISK")"
         return 1
     fi
     return 0
@@ -236,7 +285,7 @@ disks_check_target() {
 
 disks_validate_erase() {
     [[ $1 == ERASE ]] && return 0
-    VALIDATION_MESSAGE="Введите ERASE заглавными буквами для подтверждения."
+    VALIDATION_MESSAGE="$(T 'Type ERASE in uppercase to confirm.')"
     return 1
 }
 
@@ -247,16 +296,16 @@ disks_confirm_destruction() {
         return 0
     fi
     plan=$(disk_plan_print)
-    ui_header "Последнее предупреждение" "Данные на диске будут безвозвратно уничтожены"
+    ui_header "$(T 'Final warning')" "$(T 'Data on the disk will be destroyed permanently')"
     ui_wrap "$plan"
     printf '\n'
-    ui_input "Подтверждение" "Введите ERASE, чтобы начать разметку и форматирование:" \
-        "" disks_validate_erase "Это действие необратимо" no
+    ui_input "$(T 'Confirmation')" "$(T 'Type ERASE to start partitioning and formatting:')" \
+        "" disks_validate_erase "$(T 'This action cannot be undone')" no
 }
 
 disk_format_fs() {
     local fstype=$1 device=$2 label=$3
-    ui_run "Стирание подписей: $device" wipefs -a "$device" || return 1
+    ui_run "$(T 'Wiping signatures: %s' "$device")" wipefs -a "$device" || return 1
     case "$fstype" in
         vfat)
             ui_run "FAT32: $device" mkfs.vfat -F 32 -n "$label" "$device" || return 1
@@ -274,7 +323,7 @@ disk_format_fs() {
             ui_run "swap: $device" mkswap -L "$label" "$device" || return 1
             ;;
         *)
-            die "неизвестная файловая система: $fstype"
+            die "$(T 'unknown filesystem: %s' "$fstype")"
             ;;
     esac
 }
@@ -294,7 +343,7 @@ disks_create_auto_table() {
         label_type="msdos"
         cmd=(parted --script --align optimal "$CFG_DISK" mklabel msdos)
     fi
-    ui_run "Создание таблицы ${label_type^^}" "${cmd[@]}" || return 1
+    ui_run "$(T 'Creating %s partition table' "${label_type^^}")" "${cmd[@]}" || return 1
 
     for ((i = 0; i < PLAN_COUNT; i++)); do
         path=$(plan_partition_path "$i")
@@ -302,21 +351,21 @@ disks_create_auto_table() {
         fstype=${PLAN_FSTYPE[$i]}
         part_type=$(parted_fs_type "$fstype")
         if [[ $CFG_BOOT_MODE == uefi ]]; then
-            ui_run "Раздел ${path}: ${role}" parted --script --align optimal "$CFG_DISK" \
+            ui_run "$(T 'Partition %s: %s' "$path" "$role")" parted --script --align optimal "$CFG_DISK" \
                 mkpart "${PLAN_LABEL[$i]}" "$part_type" "${PLAN_START[$i]}MiB" "${PLAN_END[$i]}MiB" || return 1
             if [[ $role == esp ]]; then
-                ui_run "Флаг ESP" parted --script "$CFG_DISK" set "${PLAN_NUM[$i]}" esp on || return 1
+                ui_run "$(T 'ESP flag')" parted --script "$CFG_DISK" set "${PLAN_NUM[$i]}" esp on || return 1
             fi
         else
-            ui_run "Раздел ${path}: ${role}" parted --script --align optimal "$CFG_DISK" \
+            ui_run "$(T 'Partition %s: %s' "$path" "$role")" parted --script --align optimal "$CFG_DISK" \
                 mkpart primary "$part_type" "${PLAN_START[$i]}MiB" "${PLAN_END[$i]}MiB" || return 1
         fi
     done
     if [[ $CFG_BOOT_MODE == bios ]]; then
-        ui_run "Флаг boot" parted --script "$CFG_DISK" set 1 boot on || return 1
+        ui_run "$(T 'boot flag')" parted --script "$CFG_DISK" set 1 boot on || return 1
     fi
-    ui_run "Обновление таблицы разделов" partprobe "$CFG_DISK" || return 1
-    ui_run "Ожидание udev" udevadm settle || true
+    ui_run "$(T 'Reloading the partition table')" partprobe "$CFG_DISK" || return 1
+    ui_run "$(T 'Waiting for udev')" udevadm settle || true
     local attempt all_ready
     for attempt in {1..20}; do
         all_ready=1
@@ -330,7 +379,7 @@ disks_create_auto_table() {
     for ((i = 0; i < PLAN_COUNT; i++)); do
         path=$(plan_partition_path "$i")
         if [[ ! -b $path ]]; then
-            die "ядро не обнаружило созданный раздел $path"
+            die "$(T 'the kernel did not detect the created partition %s' "$path")"
         fi
     done
 }
@@ -373,8 +422,8 @@ disks_capture_auto_paths() {
 
 disk_partition_auto() {
     local disk_mib
-    disk_mib=$(disk_size_mib "$CFG_DISK") || die "не удалось определить размер ${CFG_DISK}"
-    disk_plan_build "$CFG_BOOT_MODE" "$disk_mib" || die "план разметки: ${PLAN_ERROR}"
+    disk_mib=$(disk_size_mib "$CFG_DISK") || die "$(T 'unable to determine the size of %s' "$CFG_DISK")"
+    disk_plan_build "$CFG_BOOT_MODE" "$disk_mib" || die "$(T 'partition plan: %s' "$PLAN_ERROR")"
     disks_confirm_destruction || return 1
     disks_create_auto_table || return 1
     disks_format_auto || return 1
@@ -398,7 +447,7 @@ disks_partition_menu_items() {
         [[ $line =~ TYPE=\"([^\"]*)\" ]] && type=${BASH_REMATCH[1]}
         [[ $line =~ MOUNTPOINTS=\"([^\"]*)\" ]] && mountpoints=${BASH_REMATCH[1]}
         [[ $type == part ]] || continue
-        label="${name} — ${size} — ${fstype:-нет ФС}"
+        label="${name} — ${size} — ${fstype:-$(T 'no filesystem')}"
         [[ -n $mountpoints ]] && label+=" — ${mountpoints}"
         printf '%s|%s|\n' "$name" "$label"
     done < <(lsblk -Ppno NAME,SIZE,FSTYPE,TYPE,MOUNTPOINTS -- "$CFG_DISK" 2>/dev/null)
@@ -406,10 +455,10 @@ disks_partition_menu_items() {
 
 disks_choose_fs() {
     local title=$1 default=$2
-    ui_menu "$title" "Файловая система будет создана заново" "$default" \
-        "xfs|XFS|Надёжная ФС по умолчанию, рекомендуется для Gentoo" \
-        "ext4|ext4|Классическая и предсказуемая ФС" \
-        "btrfs|Btrfs|Снапшоты и сжатие; subvolumes не настраиваются" || return 1
+    ui_menu "$title" "$(T 'The filesystem will be created from scratch')" "$default" \
+        "xfs|XFS|$(T 'Reliable default filesystem, recommended for Gentoo')" \
+        "ext4|ext4|$(T 'Classic and predictable filesystem')" \
+        "btrfs|Btrfs|$(T 'Snapshots and compression; subvolumes are not configured')" || return 1
 }
 
 disks_choose_partition() {
@@ -419,12 +468,12 @@ disks_choose_partition() {
     while :; do
         mapfile -t entries < <(disks_partition_menu_items)
         if ((${#entries[@]} == 0)); then
-            ui_error "Разделы не найдены" "Создайте разделы на ${CFG_DISK} и повторите выбор."
+            ui_error "$(T 'No partitions found')" "$(T 'Create partitions on %s and try again.' "$CFG_DISK")"
             return 1
         fi
         items=("${entries[@]}")
         if [[ $allow_none == yes ]]; then
-            items+=("none|Не использовать|Без отдельного раздела")
+            items+=("none|$(T 'Do not use')|$(T 'No separate partition')")
         fi
         default=${!role}
         if [[ -z $default ]]; then
@@ -434,7 +483,7 @@ disks_choose_partition() {
                 default=${items[0]%%|*}
             fi
         fi
-        ui_menu "$title" "Выберите раздел для роли ${role}" "$default" "${items[@]}" || return 1
+        ui_menu "$title" "$(T 'Choose a partition for the %s role' "$role")" "$default" "${items[@]}" || return 1
         [[ $UI_RESULT == none ]] && return 2
 
         used=0
@@ -446,7 +495,7 @@ disks_choose_partition() {
             fi
         done
         if ((used)); then
-            ui_error "Раздел уже используется" "Один раздел нельзя назначить двум ролям."
+            ui_error "$(T 'Partition already in use')" "$(T 'One partition cannot be assigned to two roles.')"
             continue
         fi
         printf -v "$role" '%s' "$UI_RESULT"
@@ -461,32 +510,29 @@ disks_manual_assign() {
     disks_check_target || return 1
 
     if command_exists cfdisk; then
-        if ui_confirm "Ручная разметка" \
-            "Открыть cfdisk для ${CFG_DISK}?
-
-Создайте разделы заранее. После выхода назначьте их ролям.
-UEFI: нужен ESP (vfat). BIOS: нужен /boot (ext4/xfs/btrfs)." no; then
-            ui_interactive "cfdisk ${CFG_DISK}" cfdisk "$CFG_DISK" || return 1
-            ui_run "Обновление таблицы разделов" partprobe "$CFG_DISK" || true
-            ui_run "Ожидание udev" udevadm settle || true
+        if ui_confirm "$(T 'Manual partitioning')" \
+            "$(T 'Open cfdisk for %s?\n\nCreate the partitions first. After exiting, assign them to roles.\nUEFI: an ESP (vfat) is required. BIOS: /boot (ext4/xfs/btrfs) is required.' "$CFG_DISK")" no; then
+            ui_interactive "$(T 'cfdisk %s' "$CFG_DISK")" cfdisk "$CFG_DISK" || return 1
+            ui_run "$(T 'Reloading the partition table')" partprobe "$CFG_DISK" || true
+            ui_run "$(T 'Waiting for udev')" udevadm settle || true
         fi
     fi
 
     CFG_PART_ESP="" CFG_PART_BOOT="" CFG_PART_SWAP="" CFG_PART_ROOT="" CFG_PART_HOME=""
-    disks_choose_partition "Корневой раздел" CFG_PART_ROOT no || return 1
+    disks_choose_partition "$(T 'Root partition')" CFG_PART_ROOT no || return 1
     if [[ $CFG_BOOT_MODE == uefi ]]; then
-        disks_choose_partition "EFI System Partition" CFG_PART_ESP no || return 1
+        disks_choose_partition "$(T 'EFI System Partition')" CFG_PART_ESP no || return 1
     else
-        disks_choose_partition "Раздел /boot" CFG_PART_BOOT no || return 1
+        disks_choose_partition "$(T '/boot partition')" CFG_PART_BOOT no || return 1
     fi
     local result=0
-    disks_choose_partition "Swap (необязательно)" CFG_PART_SWAP yes || result=$?
+    disks_choose_partition "$(T 'Swap (optional)')" CFG_PART_SWAP yes || result=$?
     if ((result == 1)); then
         return 1
     fi
     CFG_HOME_MODE=no
-    if ui_confirm "Отдельный /home" "Создать отдельный раздел /home?" no; then
-        disks_choose_partition "Раздел /home" CFG_PART_HOME no || return 1
+    if ui_confirm "$(T 'Separate /home')" "$(T 'Create a separate /home partition?')" no; then
+        disks_choose_partition "$(T '/home partition')" CFG_PART_HOME no || return 1
         CFG_HOME_MODE=separate
     fi
 
@@ -498,12 +544,12 @@ UEFI: нужен ESP (vfat). BIOS: нужен /boot (ext4/xfs/btrfs)." no; then
         if [[ -z $disk_name ]]; then
             disk_name=$parent
         elif [[ $disk_name != "$parent" ]]; then
-            ui_error "Разные диски" "Все выбранные разделы должны находиться на одном диске."
+            ui_error "$(T 'Different disks')" "$(T 'All selected partitions must be on the same disk.')"
             return 1
         fi
     done
     if [[ -z $disk_name ]]; then
-        ui_error "Не удалось определить диск" "Разделы не связаны с целым диском."
+        ui_error "$(T 'Could not determine the disk')" "$(T 'The partitions are not associated with a whole disk.')"
         return 1
     fi
     CFG_DISK="/dev/${disk_name#/dev/}"
@@ -511,11 +557,11 @@ UEFI: нужен ESP (vfat). BIOS: нужен /boot (ext4/xfs/btrfs)." no; then
     local ptt
     ptt=$(lsblk -dno PTTYPE -- "$CFG_DISK" 2>/dev/null | xargs)
     if [[ $CFG_BOOT_MODE == uefi && $ptt != gpt ]]; then
-        ui_error "Нужна GPT" "UEFI-схема в установщике требует GPT (найдено: ${ptt:-нет})."
+        ui_error "$(T 'GPT required')" "$(T 'The UEFI layout requires GPT (found: %s).' "${ptt:-$(T 'none')}")"
         return 1
     fi
     if [[ $CFG_BOOT_MODE == bios && $ptt != dos ]]; then
-        ui_error "Нужна MBR" "BIOS-схема в установщике требует MBR/DOS (найдено: ${ptt:-нет})."
+        ui_error "$(T 'MBR required')" "$(T 'The BIOS layout requires MBR/DOS (found: %s).' "${ptt:-$(T 'none')}")"
         return 1
     fi
     return 0
@@ -523,7 +569,7 @@ UEFI: нужен ESP (vfat). BIOS: нужен /boot (ext4/xfs/btrfs)." no; then
 
 disks_manual_options() {
     local fs
-    ui_header "Разделы и файловые системы" "Форматирование уничтожает данные на выбранных разделах"
+    ui_header "$(T 'Partitions and filesystems')" "$(T 'Formatting destroys data on the selected partitions')"
     ui_wrap "root: ${CFG_PART_ROOT}
 ESP: ${CFG_PART_ESP:-—}
 /boot: ${CFG_PART_BOOT:-—}
@@ -531,28 +577,28 @@ swap: ${CFG_PART_SWAP:-—}
 /home: ${CFG_PART_HOME:-—}"
     printf '\n'
 
-    if ! disks_choose_fs "Файловая система root" "$CFG_ROOT_FS"; then
+    if ! disks_choose_fs "$(T 'Root filesystem')" "$CFG_ROOT_FS"; then
         return 1
     fi
     CFG_ROOT_FS=$UI_RESULT
     CFG_FORMAT_ROOT=yes
 
     if [[ $CFG_BOOT_MODE == uefi ]]; then
-        if ui_confirm "Форматировать ESP?" \
-            "Переформатировать ${CFG_PART_ESP} в FAT32? Для dual boot обычно НЕТ." no; then
+        if ui_confirm "$(T 'Format the ESP?')" \
+            "$(T 'Reformat %s as FAT32? For dual boot the answer is usually NO.' "$CFG_PART_ESP")" no; then
             CFG_FORMAT_ESP=yes
         else
             CFG_FORMAT_ESP=no
             fs=$(fs_type "$CFG_PART_ESP")
             if [[ $fs != vfat ]]; then
-                ui_error "ESP не vfat" "Раздел ${CFG_PART_ESP} должен содержать FAT32 (найдено: ${fs:-нет})."
+                ui_error "$(T 'ESP is not vfat')" "$(T 'Partition %s must contain FAT32 (found: %s).' "$CFG_PART_ESP" "${fs:-$(T 'none')}")"
                 return 1
             fi
         fi
     else
-        if ui_confirm "Форматировать /boot?" "Переформатировать ${CFG_PART_BOOT}?" yes; then
+        if ui_confirm "$(T 'Format /boot?')" "$(T 'Reformat %s?' "$CFG_PART_BOOT")" yes; then
             CFG_FORMAT_BOOT=yes
-            if ! disks_choose_fs "Файловая система /boot" "$CFG_BOOT_FS"; then
+            if ! disks_choose_fs "$(T '/boot filesystem')" "$CFG_BOOT_FS"; then
                 return 1
             fi
             CFG_BOOT_FS=$UI_RESULT
@@ -562,7 +608,7 @@ swap: ${CFG_PART_SWAP:-—}
             case "$fs" in
                 ext4|xfs|btrfs) CFG_BOOT_FS=$fs ;;
                 *)
-                    ui_error "Некорректный /boot" "Файловая система ${CFG_PART_BOOT}: ${fs:-нет}."
+                    ui_error "$(T 'Invalid /boot')" "$(T 'Filesystem on %s: %s.' "$CFG_PART_BOOT" "${fs:-$(T 'none')}")"
                     return 1
                     ;;
             esac
@@ -570,19 +616,19 @@ swap: ${CFG_PART_SWAP:-—}
     fi
 
     if [[ -n $CFG_PART_SWAP ]]; then
-        if ui_confirm "Форматировать swap?" "Выполнить mkswap для ${CFG_PART_SWAP}?" yes; then
+        if ui_confirm "$(T 'Format swap?')" "$(T 'Run mkswap on %s?' "$CFG_PART_SWAP")" yes; then
             CFG_FORMAT_SWAP=yes
             CFG_SWAP_MODE=custom
-            CFG_SWAP_MIB=$(( $(blockdev --getsize64 -- "$CFG_PART_SWAP" 2>/dev/null || printf '0') / 1024 / 1024 ))
+            CFG_SWAP_MIB=$(disk_size_mib "$CFG_PART_SWAP" 2>/dev/null || printf '0')
         else
             CFG_FORMAT_SWAP=no
             fs=$(fs_type "$CFG_PART_SWAP")
             if [[ $fs != swap ]]; then
-                ui_error "Это не swap" "Раздел ${CFG_PART_SWAP} не содержит swap (найдено: ${fs:-нет})."
+                ui_error "$(T 'Not swap')" "$(T 'Partition %s does not contain a swap signature (found: %s).' "$CFG_PART_SWAP" "${fs:-$(T 'none')}")"
                 return 1
             fi
             CFG_SWAP_MODE=custom
-            CFG_SWAP_MIB=$(( $(blockdev --getsize64 -- "$CFG_PART_SWAP" 2>/dev/null || printf '0') / 1024 / 1024 ))
+            CFG_SWAP_MIB=$(disk_size_mib "$CFG_PART_SWAP" 2>/dev/null || printf '0')
         fi
     else
         CFG_FORMAT_SWAP=no
@@ -592,9 +638,9 @@ swap: ${CFG_PART_SWAP:-—}
 
     if [[ -n $CFG_PART_HOME ]]; then
         CFG_HOME_MODE=separate
-        if ui_confirm "Форматировать /home?" "Форматирование ${CFG_PART_HOME} уничтожит данные." no; then
+        if ui_confirm "$(T 'Format /home?')" "$(T 'Formatting %s will destroy its data.' "$CFG_PART_HOME")" no; then
             CFG_FORMAT_HOME=yes
-            if ! disks_choose_fs "Файловая система /home" "$CFG_HOME_FS"; then
+            if ! disks_choose_fs "$(T '/home filesystem')" "$CFG_HOME_FS"; then
                 return 1
             fi
             CFG_HOME_FS=$UI_RESULT
@@ -604,7 +650,7 @@ swap: ${CFG_PART_SWAP:-—}
             case "$fs" in
                 ext4|xfs|btrfs) CFG_HOME_FS=$fs ;;
                 *)
-                    ui_error "Некорректный /home" "Файловая система ${CFG_PART_HOME}: ${fs:-нет}."
+                    ui_error "$(T 'Invalid /home')" "$(T 'Filesystem on %s: %s.' "$CFG_PART_HOME" "${fs:-$(T 'none')}")"
                     return 1
                     ;;
             esac
@@ -618,26 +664,26 @@ swap: ${CFG_PART_SWAP:-—}
 
 disks_manual_validate() {
     [[ -b $CFG_PART_ROOT ]] || {
-        ui_error "Нет root" "Корневой раздел не найден."
+        ui_error "$(T 'No root partition')" "$(T 'The root partition was not found.')"
         return 1
     }
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         [[ -b $CFG_PART_ESP ]] || {
-            ui_error "Нет ESP" "EFI System Partition не найдена."
+            ui_error "$(T 'No ESP')" "$(T 'The EFI System Partition was not found.')"
             return 1
         }
     else
         [[ -b $CFG_PART_BOOT ]] || {
-            ui_error "Нет /boot" "Раздел /boot не найден."
+            ui_error "$(T 'No /boot partition')" "$(T 'The /boot partition was not found.')"
             return 1
         }
     fi
     [[ -n $CFG_PART_SWAP && ! -b $CFG_PART_SWAP ]] && {
-        ui_error "Нет swap" "Раздел swap не найден."
+        ui_error "$(T 'No swap partition')" "$(T 'The swap partition was not found.')"
         return 1
     }
     [[ -n $CFG_PART_HOME && ! -b $CFG_PART_HOME ]] && {
-        ui_error "Нет /home" "Раздел /home не найден."
+        ui_error "$(T 'No /home partition')" "$(T 'The /home partition was not found.')"
         return 1
     }
     return 0
@@ -669,20 +715,20 @@ disk_partition_manual() {
     disks_manual_options || return 1
     disks_manual_validate || return 1
 
-    ui_header "Проверка ручной схемы" "Будут отформатированы выбранные разделы"
+    ui_header "$(T 'Check the manual layout')" "$(T 'The selected partitions will be formatted')"
     ui_wrap "root: ${CFG_PART_ROOT} (${CFG_ROOT_FS})
 ESP: ${CFG_PART_ESP:-—}
 /boot: ${CFG_PART_BOOT:-—}
 swap: ${CFG_PART_SWAP:-—}
 /home: ${CFG_PART_HOME:-—}
 
-Изменения уничтожат данные на форматируемых разделах."
-    ui_footer "Enter — подтвердить · Esc — отмена"
+$(T 'The changes will destroy data on the partitions being formatted.')"
+    ui_footer "$(T 'Enter - confirm · Esc - cancel')"
     ui_read_key || return 1
     [[ $UI_KEY != esc ]] || return 1
     if ((!GI_ASSUME_YES)); then
-        ui_input "Подтверждение" "Введите ERASE для форматирования выбранных разделов:" \
-            "" disks_validate_erase "Данные на выбранных разделах будут уничтожены" no || return 1
+        ui_input "$(T 'Confirmation')" "$(T 'Type ERASE to format the selected partitions:')" \
+            "" disks_validate_erase "$(T 'Data on the selected partitions will be destroyed')" no || return 1
     fi
     disks_format_manual || return 1
     disks_capture_uuids || return 1
@@ -698,25 +744,25 @@ disks_capture_uuids() {
     local uuid
     if [[ -n $CFG_PART_ESP ]]; then
         uuid=$(fs_uuid "$CFG_PART_ESP")
-        [[ -n $uuid ]] || die "не удалось получить UUID для ESP ${CFG_PART_ESP}"
+        [[ -n $uuid ]] || die "$(T 'failed to read the UUID of ESP %s' "$CFG_PART_ESP")"
         CFG_UUID_ESP=$uuid
     fi
     if [[ -n $CFG_PART_BOOT ]]; then
         uuid=$(fs_uuid "$CFG_PART_BOOT")
-        [[ -n $uuid ]] || die "не удалось получить UUID для /boot ${CFG_PART_BOOT}"
+        [[ -n $uuid ]] || die "$(T 'failed to read the UUID of /boot %s' "$CFG_PART_BOOT")"
         CFG_UUID_BOOT=$uuid
     fi
     if [[ -n $CFG_PART_SWAP ]]; then
         uuid=$(fs_uuid "$CFG_PART_SWAP")
-        [[ -n $uuid ]] || die "не удалось получить UUID для swap ${CFG_PART_SWAP}"
+        [[ -n $uuid ]] || die "$(T 'failed to read the UUID of swap %s' "$CFG_PART_SWAP")"
         CFG_UUID_SWAP=$uuid
     fi
     uuid=$(fs_uuid "$CFG_PART_ROOT")
-    [[ -n $uuid ]] || die "не удалось получить UUID для root ${CFG_PART_ROOT}"
+    [[ -n $uuid ]] || die "$(T 'failed to read the UUID of root %s' "$CFG_PART_ROOT")"
     CFG_UUID_ROOT=$uuid
     if [[ -n $CFG_PART_HOME ]]; then
         uuid=$(fs_uuid "$CFG_PART_HOME")
-        [[ -n $uuid ]] || die "не удалось получить UUID для /home ${CFG_PART_HOME}"
+        [[ -n $uuid ]] || die "$(T 'failed to read the UUID of /home %s' "$CFG_PART_HOME")"
         CFG_UUID_HOME=$uuid
     else
         CFG_UUID_HOME=""
@@ -731,14 +777,14 @@ mount_by_uuid() {
         if [[ $(fs_uuid "$current") == "$uuid" ]]; then
             return 0
         fi
-        ui_error "Точка занята" "${target} уже содержит другую файловую систему (${current})."
+        ui_error "$(T 'Mount point busy')" "$(T '%s already contains a different filesystem (%s).' "$target" "$current")"
         return 1
     fi
     ensure_dir "$target"
     if [[ $fstype == vfat ]]; then
-        ui_run "Монтирование ${target}" mount -o umask=0077 "UUID=${uuid}" "$target" || return 1
+        ui_run "$(T 'Mounting %s' "$target")" mount -o umask=0077 "UUID=${uuid}" "$target" || return 1
     else
-        ui_run "Монтирование ${target}" mount "UUID=${uuid}" "$target" || return 1
+        ui_run "$(T 'Mounting %s' "$target")" mount "UUID=${uuid}" "$target" || return 1
     fi
 }
 
@@ -746,25 +792,25 @@ disks_mount_all() {
     local target
     if ! is_mounted "$GI_ROOT"; then
         ensure_dir "$GI_ROOT"
-        [[ -n $CFG_UUID_ROOT ]] || die "UUID root не определён"
+        [[ -n $CFG_UUID_ROOT ]] || die "$(T 'root UUID is not set')"
         mount_by_uuid "$CFG_UUID_ROOT" "$GI_ROOT" "root" || return 1
     else
         target=$(mount_source_for "$GI_ROOT")
         if [[ -n $CFG_UUID_ROOT && $(fs_uuid "$target") != "$CFG_UUID_ROOT" ]]; then
-            ui_error "Неверный root" "${GI_ROOT} уже занят ${target}."
+            ui_error "$(T 'Wrong root')" "$(T '%s is already occupied by %s.' "$GI_ROOT" "$target")"
             return 1
         fi
     fi
 
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         if [[ -z $CFG_UUID_ESP ]]; then
-            die "UUID ESP не определён"
+            die "$(T 'ESP UUID is not set')"
         fi
         ensure_dir "$GI_ROOT/efi"
         mount_by_uuid "$CFG_UUID_ESP" "$GI_ROOT/efi" vfat || return 1
     else
         if [[ -z $CFG_UUID_BOOT ]]; then
-            die "UUID /boot не определён"
+            die "$(T '/boot UUID is not set')"
         fi
         ensure_dir "$GI_ROOT/boot"
         mount_by_uuid "$CFG_UUID_BOOT" "$GI_ROOT/boot" "boot" || return 1
@@ -777,14 +823,14 @@ disks_mount_all() {
 
     if [[ -n $CFG_PART_SWAP && -n $CFG_UUID_SWAP ]]; then
         if ! swapon --show=NAME --noheadings 2>/dev/null | grep -Fxq "$CFG_PART_SWAP"; then
-            ui_run "Активация swap" swapon "UUID=${CFG_UUID_SWAP}" || return 1
+            ui_run "$(T 'Activating swap')" swapon "UUID=${CFG_UUID_SWAP}" || return 1
         fi
     fi
 
     local avail
     avail=$(free_space_mib "$GI_ROOT")
     if [[ -n $avail ]] && ((avail < 6144)); then
-        ui_error "Мало места" "На корневом разделе доступно ${avail} MiB. Нужно минимум 6 GiB."
+        ui_error "$(T 'Not enough space')" "$(T 'Only %s MiB are available on the root partition. At least 6 GiB are required.' "$avail")"
         return 1
     fi
     log_info "root mounted: $(mount_source_for "$GI_ROOT"), available ${avail} MiB"
@@ -812,7 +858,7 @@ disks_unmount_all() {
 
 step_disk() {
     if is_mounted "$GI_ROOT"; then
-        ui_msg "Повторная разметка" "Целевая система уже смонтирована. Установщик размонтирует её перед повторной разметкой."
+        ui_msg "$(T 'Repartitioning')" "$(T 'The target system is already mounted. The installer will unmount it before repartitioning.')"
         chroot_unmount
         disks_unmount_all || return 1
     fi
@@ -829,12 +875,12 @@ step_disk() {
         local disk_mib
         disk_mib=$(disk_size_mib "$CFG_DISK") || return 1
         disk_plan_build "$CFG_BOOT_MODE" "$disk_mib" || {
-            ui_error "План разметки" "$PLAN_ERROR"
+            ui_error "$(T 'Partition plan')" "$PLAN_ERROR"
             return 1
         }
-        ui_header "План разметки" "Проверьте размеры и точки монтирования"
+        ui_header "$(T 'Partition plan')" "$(T 'Check the sizes and mount points')"
         ui_wrap "$(disk_plan_print)"
-        ui_pause "Enter — перейти к подтверждению"
+        ui_pause "$(T 'Enter - continue to confirmation')"
         disk_partition_auto || return 1
     else
         disk_partition_manual || return 1

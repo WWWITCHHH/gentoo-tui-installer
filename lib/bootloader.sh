@@ -25,28 +25,28 @@ bootloader_install_grub() {
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         packages+=(sys-boot/efibootmgr)
     fi
-    chroot_run "Установка GRUB" emerge --ask=n --quiet "${packages[@]}" || return 1
+    chroot_run "$(T 'Installing GRUB')" emerge --ask=n --quiet "${packages[@]}" || return 1
 
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         is_mounted "$GI_ROOT/efi" || {
-            ui_error "ESP не смонтирован" "Ожидалась точка ${GI_ROOT}/efi."
+            ui_error "$(T 'ESP is not mounted')" "$(T 'Expected mount point %s/efi.' "$GI_ROOT")"
             return 1
         }
-        chroot_run "Установка GRUB в ESP" grub-install \
+        chroot_run "$(T 'Installing GRUB into the ESP')" grub-install \
             --target=x86_64-efi --efi-directory=/efi --bootloader-id=Gentoo --recheck || return 1
     else
         [[ -n $CFG_DISK && -b $CFG_DISK ]] || {
-            ui_error "Нет целевого диска" "Для установки GRUB в MBR нужен ${CFG_DISK}."
+            ui_error "$(T 'No target disk')" "$(T 'Installing GRUB into the MBR requires %s.' "$CFG_DISK")"
             return 1
         }
         is_mounted "$GI_ROOT/boot" || {
-            ui_error "/boot не смонтирован" "Ожидалась точка ${GI_ROOT}/boot."
+            ui_error "$(T '/boot is not mounted')" "$(T 'Expected mount point %s/boot.' "$GI_ROOT")"
             return 1
         }
-        chroot_run "Установка GRUB в MBR ${CFG_DISK}" grub-install \
+        chroot_run "$(T 'Installing GRUB into the MBR of %s' "$CFG_DISK")" grub-install \
             --target=i386-pc --recheck "$CFG_DISK" || return 1
     fi
-    chroot_run "Генерация grub.cfg" grub-mkconfig -o /boot/grub/grub.cfg || return 1
+    chroot_run "$(T 'Generating grub.cfg')" grub-mkconfig -o /boot/grub/grub.cfg || return 1
     return 0
 }
 
@@ -54,18 +54,18 @@ bootloader_verify() {
     local cfg="$GI_ROOT/boot/grub/grub.cfg"
     local efi_file rootline
     if [[ ! -s $cfg ]]; then
-        ui_error "grub.cfg не создан" "Файл ${cfg} отсутствует или пуст."
+        ui_error "$(T 'grub.cfg was not created')" "$(T '%s is missing or empty.' "$cfg")"
         return 1
     fi
     if ! grep -q 'menuentry' "$cfg"; then
-        ui_error "В grub.cfg нет пунктов загрузки" \
-            "grub-mkconfig не нашёл ядро. Проверьте /boot и этап ядра."
+        ui_error "$(T 'grub.cfg has no boot entries')" \
+            "$(T 'grub-mkconfig did not find a kernel. Check /boot and the kernel step.')"
         return 1
     fi
     rootline=$(grep -m1 -oE 'root=[^[:space:]]+' "$cfg" || true)
     if [[ -z $rootline ]]; then
-        ui_error "В grub.cfg нет root=" \
-            "GRUB не смог определить корневое устройство. Проверьте fstab и UUID root."
+        ui_error "$(T 'grub.cfg has no root=')" \
+            "$(T 'GRUB could not determine the root device. Check fstab and the root UUID.')"
         return 1
     fi
     log_info "grub.cfg root argument: $rootline"
@@ -75,7 +75,7 @@ bootloader_verify() {
             efi_file="$GI_ROOT/efi/EFI/gentoo/grubx64.efi"
         fi
         if [[ ! -f $efi_file ]]; then
-            ui_error "GRUB EFI не найден" "В ${GI_ROOT}/efi/EFI/Gentoo нет grubx64.efi."
+            ui_error "$(T 'GRUB EFI was not found')" "$(T 'There is no grubx64.efi in %s/efi/EFI/Gentoo.' "$GI_ROOT")"
             return 1
         fi
     fi
@@ -86,7 +86,7 @@ bootloader_verify() {
 step_bootloader() {
     require_mountpoint "$GI_ROOT"
     [[ -f "$GI_ROOT/etc/fstab" ]] || {
-        ui_error "Нет fstab" "Сначала выполните этап настройки системы."
+        ui_error "$(T 'No fstab')" "$(T 'Run the system configuration step first.')"
         return 1
     }
     chroot_mount || return 1

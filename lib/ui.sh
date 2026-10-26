@@ -22,6 +22,7 @@ UI_KEY=""
 UI_CANCELLED=0
 UI_INT_MIN=0
 UI_INT_MAX=0
+UI_MENU_SUMMARY=()
 
 ui_init() {
     GI_UI_ACTIVE=1
@@ -65,7 +66,8 @@ ui_hr() {
 }
 
 ui_wrap() {
-    local text=$1 width=${2:-$(( $(ui_width) - 4 ))}
+    local text width=${2:-$(( $(ui_width) - 4 ))}
+    text=$(i18n_text "${1:-}")
     printf '%s\n' "$text" | fold -s -w "$width" | sed 's/^/  /'
 }
 
@@ -82,7 +84,9 @@ ui_progress_bar() {
 }
 
 ui_header() {
-    local title=$1 subtitle=${2:-} width progress line
+    local title subtitle title_color=${3:-} width progress line
+    title=$(i18n_text "${1:-}")
+    subtitle=$(i18n_text "${2:-}")
     width=$(ui_width)
     printf -v line '%*s' "$((width - 2))" ''
     line=${line// /─}
@@ -95,7 +99,7 @@ ui_header() {
     fi
     printf '\n%s╰%s╯%s\n\n' "$C_CYAN" "$line" "$C_RESET"
     if [[ -n $title ]]; then
-        printf '  %s%s%s\n' "$C_BOLD$C_WHITE" "$title" "$C_RESET"
+        printf '  %s%s%s%s\n' "$C_BOLD$C_WHITE" "$title_color" "$title" "$C_RESET"
     fi
     if [[ -n $subtitle ]]; then
         printf '  %s%s%s\n' "$C_DIM" "$subtitle" "$C_RESET"
@@ -103,24 +107,50 @@ ui_header() {
     printf '\n'
 }
 
+ui_action_bar() {
+    printf '\n%s  %s%s%s  %s%s%s  %s%s%s  %s%s%s\n' \
+        "$C_DIM" \
+        "$C_CYAN$C_BOLD" "$(T '<Select>')" "$C_DIM" \
+        "$C_CYAN$C_BOLD" "$(T '<Exit>')" "$C_DIM" \
+        "$C_CYAN$C_BOLD" "$(T '<Save>')" "$C_DIM" \
+        "$C_CYAN$C_BOLD" "$(T '<Help>')" "$C_RESET"
+}
+
 ui_footer() {
-    local hint=${1:-"↑/↓ — выбор · Enter — подтвердить · Esc — назад"}
+    local hint
+    hint=$(i18n_text "${1:-↑/↓ — choose · Enter — confirm · Esc — back}")
     printf '\n%s  %s%s\n' "$C_DIM" "$hint" "$C_RESET"
+    ui_action_bar
+}
+
+ui_summary() {
+    ((${#UI_MENU_SUMMARY[@]})) || return 0
+    local line
+    printf '\n%s  %s%s\n' "$C_DIM" "$(T 'Current configuration')" "$C_RESET"
+    for line in "${UI_MENU_SUMMARY[@]}"; do
+        printf '  %s%s%s\n' "$C_DIM" "$line" "$C_RESET"
+    done
 }
 
 ui_read_key() {
     UI_KEY=""
     IFS= read -rsn1 UI_KEY || return 1
     if [[ $UI_KEY == $'\e' ]]; then
-        local seq=""
-        IFS= read -rsn2 -t 0.08 seq || true
+        local seq="" ch
+        while IFS= read -rsn1 -t 0.04 ch; do
+            seq+=$ch
+        done
         case "$seq" in
-            '[A') UI_KEY=up ;;
-            '[B') UI_KEY=down ;;
-            '[C') UI_KEY=right ;;
-            '[D') UI_KEY=left ;;
-            '[H') UI_KEY=home ;;
-            '[F') UI_KEY=end ;;
+            '[A'|'OA') UI_KEY=up ;;
+            '[B'|'OB') UI_KEY=down ;;
+            '[C'|'OC') UI_KEY=right ;;
+            '[D'|'OD') UI_KEY=left ;;
+            '[H'|'OH'|'[1~'|'[7~') UI_KEY=home ;;
+            '[F'|'OF'|'[4~'|'[8~') UI_KEY=end ;;
+            'OP'|'[11~'|'[[A') UI_KEY=help ;;
+            'OQ'|'[12~'|'[[B') UI_KEY=save ;;
+            '[21~') UI_KEY=exit_action ;;
+            '') UI_KEY=esc ;;
             *) UI_KEY=esc ;;
         esac
     elif [[ -z $UI_KEY ]]; then
@@ -131,6 +161,8 @@ ui_read_key() {
         UI_KEY=clear
     elif [[ $UI_KEY == $'\x17' ]]; then
         UI_KEY=word
+    elif [[ $UI_KEY == $'\x13' ]]; then
+        UI_KEY=save
     fi
     return 0
 }
@@ -140,15 +172,17 @@ ui_menu() {
     shift 3
     local -a items=("$@") tags=() labels=() notes=()
     local item tag label note
+    title=$(i18n_text "$title")
+    subtitle=$(i18n_text "$subtitle")
     for item in "${items[@]}"; do
         tag="" label="" note=""
         IFS='|' read -r tag label note <<<"$item"
         [[ -z $tag ]] && continue
         tags+=("$tag")
-        labels+=("$label")
-        notes+=("$note")
+        labels+=("$(i18n_text "$label")")
+        notes+=("$(i18n_text "$note")")
     done
-    ((${#tags[@]} > 0)) || die "ui_menu: нет пунктов меню"
+    ((${#tags[@]} > 0)) || die "ui_menu: no menu items"
 
     local selected=0 i
     for i in "${!tags[@]}"; do
@@ -158,10 +192,14 @@ ui_menu() {
         fi
     done
 
-    local page_size offset=0 page_end note max_len key
-    page_size=$(( $(ui_height) - 11 ))
-    ((page_size < 5)) && page_size=5
+    local page_size=5 offset=0 page_end note max_len key summary_lines
     while :; do
+        if declare -F ui_on_summary >/dev/null 2>&1; then
+            ui_on_summary
+        fi
+        summary_lines=${#UI_MENU_SUMMARY[@]}
+        page_size=$(( $(ui_height) - 11 - summary_lines ))
+        ((page_size < 5)) && page_size=5
         if ((selected < offset)); then offset=$selected; fi
         if ((selected >= offset + page_size)); then offset=$((selected - page_size + 1)); fi
         page_end=$((offset + page_size))
@@ -179,13 +217,15 @@ ui_menu() {
             fi
         done
         if (( ${#tags[@]} > page_size )); then
-            printf '\n%s  Показаны %d–%d из %d%s\n' "$C_DIM" "$((offset + 1))" "$page_end" "${#tags[@]}" "$C_RESET"
+            printf '\n%s  %s%s\n' "$C_DIM" \
+                "$(T 'Showing %d–%d of %d' "$((offset + 1))" "$page_end" "${#tags[@]}")" "$C_RESET"
         fi
         note=${notes[$selected]}
         if [[ -n $note ]]; then
             printf '\n'
             ui_wrap "$note"
         fi
+        ui_summary
         ui_footer
         if ! ui_read_key; then
             UI_CANCELLED=1
@@ -206,7 +246,13 @@ ui_menu() {
                 UI_CANCELLED=0
                 return 0
                 ;;
-            esc|left|q)
+            help)
+                ui_show_help
+                ;;
+            save)
+                ui_save_action
+                ;;
+            esc|left|q|exit_action)
                 UI_CANCELLED=1
                 return 1
                 ;;
@@ -227,8 +273,8 @@ ui_confirm() {
     local default_tag=yes
     [[ $default == no ]] && default_tag=no
     if ui_menu "$title" "$question" "$default_tag" \
-        "yes|Да|Подтвердить действие" \
-        "no|Нет|Вернуться без изменений"; then
+        "yes|$(T 'Yes')|$(T 'Confirm the action')" \
+        "no|$(T 'No')|$(T 'Return without changes')"; then
         [[ $UI_RESULT == yes ]]
         return
     fi
@@ -239,20 +285,20 @@ ui_msg() {
     local title=$1 body=${2:-}
     ui_header "$title"
     ui_wrap "$body"
-    ui_footer "Enter — продолжить"
+    ui_footer "Enter — continue"
     ui_read_key || true
 }
 
 ui_error() {
     local title=$1 body=${2:-}
-    ui_header "$C_RED$title$C_RESET"
+    ui_header "$title" "" "$C_RED"
     ui_wrap "$body"
-    ui_footer "Enter — закрыть"
+    ui_footer "Enter — close"
     ui_read_key || true
 }
 
 ui_pause() {
-    ui_footer "${1:-Enter — продолжить}"
+    ui_footer "${1:-Enter — continue}"
     ui_read_key || true
 }
 
@@ -260,7 +306,7 @@ ui_show_file() {
     local title=$1 file=$2
     printf '%s\e[?25h\e[0m' "$C_RESET"
     ui_clear
-    printf '%s%s%s\n\n' "$C_BOLD$C_CYAN" "$title" "$C_RESET"
+    printf '%s%s%s\n\n' "$C_BOLD$C_CYAN" "$(i18n_text "$title")" "$C_RESET"
     if command -v less >/dev/null 2>&1; then
         LESS=FRX less -R -- "$file" || true
     else
@@ -268,12 +314,15 @@ ui_show_file() {
     fi
     printf '\n'
     printf '%s\e[?25l' "$C_RESET"
-    ui_pause "Enter — вернуться"
+    ui_pause "Enter — back"
 }
 
 ui_input() {
     local title=$1 prompt=$2 default=$3 validator=${4:-} hint=${5:-} masked=${6:-no}
     local value=$default error="" display max_len key i
+    title=$(i18n_text "$title")
+    prompt=$(i18n_text "$prompt")
+    hint=$(i18n_text "$hint")
     UI_CANCELLED=0
     UI_RESULT=""
     while :; do
@@ -298,9 +347,9 @@ ui_input() {
         fi
         printf '\n'
         if [[ -n $error ]]; then
-            printf '\n  %s✖ %s%s\n' "$C_RED" "$error" "$C_RESET"
+            printf '\n  %s✖ %s%s\n' "$C_RED" "$(i18n_text "$error")" "$C_RESET"
         fi
-        ui_footer "Enter — принять · Ctrl-U — очистить · Esc — отмена"
+        ui_footer "Enter — accept · Ctrl-U — clear · Esc — cancel"
         if ! ui_read_key; then
             UI_CANCELLED=1
             return 1
@@ -317,7 +366,13 @@ ui_input() {
                 UI_CANCELLED=0
                 return 0
                 ;;
-            esc|left)
+            help)
+                ui_show_help
+                ;;
+            save)
+                ui_save_action
+                ;;
+            esc|left|exit_action)
                 UI_CANCELLED=1
                 return 1
                 ;;
@@ -346,27 +401,28 @@ ui_int_input() {
     local title=$1 prompt=$2 default=$3 min=$4 max=$5
     UI_INT_MIN=$min
     UI_INT_MAX=$max
-    ui_input "$title" "$prompt" "$default" _ui_validate_int_range "Целое число от ${min} до ${max}" no
+    ui_input "$title" "$prompt" "$default" _ui_validate_int_range \
+        "$(T 'Integer from %d to %d' "$min" "$max")" no
 }
 
 _ui_validate_int_range() {
     validate_int_range "$1" "$UI_INT_MIN" "$UI_INT_MAX" 2>/dev/null && return 0
-    VALIDATION_MESSAGE="Введите целое число от ${UI_INT_MIN} до ${UI_INT_MAX}."
+    VALIDATION_MESSAGE=$(T 'Enter an integer from %d to %d.' "$UI_INT_MIN" "$UI_INT_MAX")
     return 1
 }
 
 ui_password() {
     local title=$1 prompt=$2
     ui_input "$title" "$prompt" "" validate_nonempty \
-        "Ввод скрыт. Пароль не сохраняется на диск." yes
+        "Input is hidden. The password is not written to disk." yes
 }
 
 ui_password_twice() {
     local title=$1 first second
     while :; do
-        ui_password "$title" "Введите пароль:" || return 1
+        ui_password "$title" "Enter password:" || return 1
         first=$UI_RESULT
-        ui_password "$title" "Повторите пароль:" || return 1
+        ui_password "$title" "Repeat password:" || return 1
         second=$UI_RESULT
         if [[ $first == "$second" ]]; then
             UI_SECRET=$first
@@ -374,7 +430,7 @@ ui_password_twice() {
             UI_RESULT=""
             return 0
         fi
-        ui_error "Пароли не совпадают" "Повторите ввод."
+        ui_error "Passwords do not match" "Please try again."
     done
 }
 
@@ -382,8 +438,32 @@ ui_step_intro() {
     local index=$1 total=$2 title=$3 body=$4
     GI_STEP_INDEX=$index
     GI_STEP_TOTAL=$total
-    ui_header "Этап ${index} из ${total}: ${title}" "$body"
-    ui_pause "Enter — начать этап"
+    ui_header "$(T 'Step %d of %d: %s' "$index" "$total" "$title")" "$body"
+    ui_pause "Enter — start step"
+}
+
+ui_show_help() {
+    if declare -F ui_on_help >/dev/null 2>&1; then
+        ui_on_help
+        return 0
+    fi
+    ui_msg "Keyboard help" \
+        "Arrow keys — move in a menu
+Enter — select or confirm
+Esc — go back or leave the current screen
+F1 — this help
+F2 or Ctrl-S — save the configuration
+F10 — exit the current menu
+
+The bottom action bar always shows the available actions."
+}
+
+ui_save_action() {
+    if declare -F ui_on_save >/dev/null 2>&1; then
+        ui_on_save
+        return 0
+    fi
+    ui_msg "Save" "The configuration is saved automatically when the wizard changes a value."
 }
 
 ui_readonly() {

@@ -54,11 +54,12 @@ check: syntax lint test
 
 install:
 	@test -n '$(LIBDIR)' || { printf 'LIBDIR must not be empty\n' >&2; exit 1; }
-	install -d '$(DESTDIR)$(LIBDIR)/lib' '$(DESTDIR)$(LIBDIR)/conf'
+	install -d '$(DESTDIR)$(LIBDIR)/lib' '$(DESTDIR)$(LIBDIR)/lib/lang' '$(DESTDIR)$(LIBDIR)/conf'
 	install -d '$(DESTDIR)$(BINDIR)' '$(DESTDIR)$(DOCDIR)'
 	install -m 0755 gentoo-installer '$(DESTDIR)$(LIBDIR)/gentoo-installer'
 	install -m 0644 VERSION '$(DESTDIR)$(LIBDIR)/VERSION'
 	install -m 0644 lib/*.sh '$(DESTDIR)$(LIBDIR)/lib/'
+	install -m 0644 lib/lang/*.tsv '$(DESTDIR)$(LIBDIR)/lib/lang/'
 	install -m 0644 conf/installer.conf.example '$(DESTDIR)$(LIBDIR)/conf/'
 	install -m 0644 README.md CHANGELOG.md SECURITY.md CONTRIBUTING.md LICENSE \
 		'$(DESTDIR)$(DOCDIR)/'

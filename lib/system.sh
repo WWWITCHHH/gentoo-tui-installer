@@ -24,7 +24,7 @@ system_write_timezone() {
     local hwopt=--utc
     [[ $CFG_HWCLOCK == local ]] && hwopt=--localtime
     if [[ $CFG_TIMEZONE != UTC && ! -e $zonefile ]]; then
-        ui_error "Часовой пояс не найден" "В stage3 нет ${zonefile}."
+        ui_error "$(T 'Timezone not found')" "$(T '%s is missing from Stage3.' "$zonefile")"
         return 1
     fi
     ln -sfn "/usr/share/zoneinfo/${CFG_TIMEZONE}" "$GI_ROOT/etc/localtime"
@@ -39,8 +39,8 @@ system_write_timezone() {
     fi
     # An unavailable RTC must not abort the whole installation. Record the
     # UTC/local choice in /etc/adjtime so the installed system still knows it.
-    if ! chroot "$GI_ROOT" /bin/bash -lc "hwclock --systohc ${hwopt}" >>"$GI_LOG_FILE" 2>&1; then
-        warn "не удалось записать время в RTC; установка продолжится"
+    if ! LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc "hwclock --systohc ${hwopt}" >>"$GI_LOG_FILE" 2>&1; then
+        warn "$(T 'failed to write the time to the RTC; installation will continue')"
         printf '0.0 0 0.0\n0\n%s\n' "$CFG_HWCLOCK" |
             write_file_atomic "$GI_ROOT/etc/adjtime" 0644
     fi
@@ -53,8 +53,8 @@ system_write_locale() {
     printf '%s UTF-8\n' "$locale" | write_file_atomic "$GI_ROOT/etc/locale.gen" 0644
     printf 'LANG="%s"\n' "$locale" | write_file_atomic "$GI_ROOT/etc/env.d/02locale" 0644
     printf 'LANG=%s\n' "$locale" | write_file_atomic "$GI_ROOT/etc/locale.conf" 0644
-    chroot_run "Генерация локали ${locale}" locale-gen || return 1
-    chroot_run "Обновление окружения" env-update || return 1
+    chroot_run "$(T 'Generating locale %s' "$locale")" locale-gen || return 1
+    chroot_run "$(T 'Updating the environment')" env-update || return 1
     log_info "locale set: $locale"
 }
 
@@ -95,10 +95,10 @@ system_write_fstab() {
 
 system_root_password() {
     local password
-    ui_password_twice "Пароль root" || return 1
+    ui_password_twice "$(T 'Root password')" || return 1
     password=$UI_SECRET
-    if ! ui_run_input "Установка пароля root" "root:${password}" \
-        chroot "$GI_ROOT" /usr/bin/chpasswd; then
+    if ! ui_run_input "$(T 'Setting the root password')" "root:${password}" \
+        env LC_ALL=C LANG=C chroot "$GI_ROOT" /usr/bin/chpasswd; then
         unset password UI_SECRET
         UI_RESULT=""
         return 1
@@ -119,17 +119,17 @@ system_create_user() {
     done
     [[ -n $group_list ]] && useradd_args+=(-G "$group_list")
     if [[ -z $(chroot_capture id -u "$CFG_USERNAME" | tr -d '[:space:]') ]]; then
-        chroot_run "Создание пользователя ${CFG_USERNAME}" \
+        chroot_run "$(T 'Creating user %s' "$CFG_USERNAME")" \
             useradd "${useradd_args[@]}" "$CFG_USERNAME" || return 1
     else
         log_info "user already exists: $CFG_USERNAME"
-        [[ -n $group_list ]] && chroot_run "Добавление ${CFG_USERNAME} в группы" \
+        [[ -n $group_list ]] && chroot_run "$(T 'Adding %s to groups' "$CFG_USERNAME")" \
             usermod -aG "$group_list" "$CFG_USERNAME" || true
     fi
-    ui_password_twice "Пароль пользователя ${CFG_USERNAME}" || return 1
+    ui_password_twice "$(T 'Password for user %s' "$CFG_USERNAME")" || return 1
     password=$UI_SECRET
-    if ! ui_run_input "Установка пароля ${CFG_USERNAME}" \
-        "${CFG_USERNAME}:${password}" chroot "$GI_ROOT" /usr/bin/chpasswd; then
+    if ! ui_run_input "$(T 'Setting the password for %s' "$CFG_USERNAME")" \
+        "${CFG_USERNAME}:${password}" env LC_ALL=C LANG=C chroot "$GI_ROOT" /usr/bin/chpasswd; then
         unset password UI_SECRET
         UI_RESULT=""
         return 1
@@ -143,7 +143,7 @@ system_create_user() {
 step_system() {
     require_mountpoint "$GI_ROOT"
     [[ -f "$GI_ROOT/etc/os-release" ]] || {
-        ui_error "Нет базовой системы" "Сначала выполните этапы stage3 и Portage."
+        ui_error "$(T 'No base system')" "$(T 'Run the Stage3 and Portage steps first.')"
         return 1
     }
     chroot_mount || return 1
@@ -154,7 +154,7 @@ step_system() {
     system_write_fstab
     system_root_password || return 1
     system_create_user || return 1
-    chroot_run "Финальное обновление окружения" env-update || return 1
+    chroot_run "$(T 'Final environment update')" env-update || return 1
     config_save
     log_info "system step finished"
 }

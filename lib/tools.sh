@@ -4,9 +4,9 @@
 tools_enable_service() {
     local service=$1
     if [[ $CFG_INIT == systemd ]]; then
-        chroot_run "Включение службы ${service}" systemctl enable "$service" || return 1
+        chroot_run "$(T 'Enabling service %s' "$service")" systemctl enable "$service" || return 1
     else
-        chroot_run "Включение службы ${service}" rc-update add "$service" default || return 1
+        chroot_run "$(T 'Enabling service %s' "$service")" rc-update add "$service" default || return 1
     fi
 }
 
@@ -19,7 +19,7 @@ tools_write_sudoers() {
 # Members of the wheel group may use sudo with their own password.
 %wheel ALL=(ALL:ALL) ALL
 EOF
-    chroot_run "Проверка sudoers" visudo -cf /etc/sudoers || return 1
+    chroot_run "$(T 'Checking sudoers')" visudo -cf /etc/sudoers || return 1
     log_info "sudoers wheel rule installed"
 }
 
@@ -67,7 +67,7 @@ step_tools() {
         packages+=(app-admin/sudo)
     fi
 
-    chroot_run "Установка системных служб и утилит" \
+    chroot_run "$(T 'Installing system services and utilities')" \
         emerge --ask=n --quiet "${packages[@]}" || return 1
 
     service=$(tools_network_service)

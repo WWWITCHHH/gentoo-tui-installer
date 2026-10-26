@@ -5,7 +5,7 @@
 set -Eeuo pipefail
 
 if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
-    printf 'Ошибка: требуется Bash 4.4 или новее.\n' >&2
+    printf 'Error: Bash 4.4 or newer is required.\n' >&2
     exit 1
 fi
 
@@ -24,8 +24,8 @@ if command -v git >/dev/null 2>&1 && git -C "$GI_SCRIPT_DIR" rev-parse --git-dir
 fi
 readonly GI_VERSION GI_GIT_VERSION
 
-# The TUI uses Unicode box drawing and Cyrillic labels. Prefer a UTF-8 locale,
-# while leaving the user's locale untouched if none is available.
+# The TUI uses Unicode box drawing. A UTF-8 locale is required for correct
+# rendering; lib/i18n.sh picks the best available locale for the UI language.
 if locale -a 2>/dev/null | grep -qiE '^C\.utf-?8$'; then
     export LC_ALL=C.UTF-8
 elif locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
@@ -35,6 +35,8 @@ fi
 export TERM="${TERM:-linux}"
 umask 022
 
+# shellcheck source=lib/i18n.sh
+source "$GI_SCRIPT_DIR/lib/i18n.sh"
 # shellcheck source=lib/core.sh
 source "$GI_SCRIPT_DIR/lib/core.sh"
 # shellcheck source=lib/validate.sh
