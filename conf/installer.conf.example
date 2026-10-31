@@ -6,6 +6,9 @@
 #
 # All values are double-quoted. Inline comments after the closing quote are
 # allowed. Unknown keys are rejected. SCHEMA must stay "1".
+#
+# Easy/Advanced mode is a session-only UI choice in the main menu; it is not
+# stored in this file. Easy mode applies its defaults only to a new config.
 
 SCHEMA="1"
 

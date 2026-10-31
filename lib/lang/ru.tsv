@@ -933,3 +933,10 @@ Generating the kernel configuration	Генерация конфигурации 
 Kernel configuration is incomplete	Конфигурация ядра неполна
 The generated .config is missing required options: %s	В сгенерированном .config отсутствуют обязательные опции: %s
 The generated .config file was not created.	Сгенерированный файл .config не был создан.
+Mode: Easy	Режим: простой
+Mode: Advanced	Режим: расширенный
+Switch to Advanced mode	Переключить на расширенный режим
+Switch to Easy mode	Переключить на простой режим
+Auto-detected; switch to Advanced mode to change it	Определено автоматически; для изменения переключитесь в расширенный режим
+Detected automatically. Switch to Advanced mode to change it.	Определено автоматически. Для изменения переключитесь в расширенный режим.
+Gentoo Linux installer with a console interface.\\n\\nSupported: UEFI+GPT and BIOS+MBR, OpenRC and systemd,\\nbinary, compiled, automatic and manual kernels, GRUB,\\noptional XFCE + LightDM and GNOME + GDM,\\nEasy and Advanced configuration modes.\\nNot supported: LUKS, LVM, RAID, Secure Boot signing and dual boot.\\n\\nThis project is distributed under the MIT license.\\nLogs: %s\\nState: %s	Установщик Gentoo Linux с консольным интерфейсом.\n\nПоддерживается: UEFI+GPT и BIOS+MBR, OpenRC и systemd,\nбинарное, скомпилированное, автоматическое и ручное ядро, GRUB,\nнеобязательные XFCE + LightDM и GNOME + GDM,\nрежимы настройки Easy и Advanced.\nНе поддерживается: LUKS, LVM, RAID, подпись Secure Boot и dual boot.\n\nПроект распространяется по лицензии MIT.\nЖурналы: %s\nСостояние: %s

@@ -200,6 +200,30 @@ LightDM и GDM требуют ровно один из `elogind`/`systemd` (эт
 `GI_USER_PASSWORD`, передаются в `chpasswd` через stdin и очищаются сразу после
 применения. В конфигурацию, состояние и журналы они не попадают.
 
+## Режимы Easy и Advanced
+
+При каждом запуске включается **Easy mode**. Переключатель находится в главном
+меню и меняет только состав видимых настроек; уже сохранённые значения не
+сбрасываются.
+
+Easy mode:
+
+- скрывает boot mode, partitioning mode, mirror, direct Stage3 URL, профиль
+  Portage, CPU_FLAGS_X86, @world, MAKEOPTS, CFLAGS, extra USE, CPU microcode,
+  kernel cmdline, installer language, `/home` и `/home filesystem`;
+- задаёт для новой конфигурации `ROOT_FS=ext4`, `STAGE_FLAVOR=systemd`,
+  `UPDATE_WORLD=yes`; остальные значения берутся из обычных defaults;
+- показывает `Target disk`, `Root filesystem`, `Swap`, kernel method,
+  linux-firmware, пользователей, службы и графику;
+- показывает скрытую настройку, если без неё конфигурация станет
+  противоречивой: boot mode при конфликте с firmware/диском, partitioning mode
+  и ручные разделы при manual-схеме, `/home` при отдельном home;
+- делает `VIDEO_CARDS` read-only, если автоопределение дало значение; если
+  значение пустое, выбор из списка остаётся доступен.
+
+Advanced mode показывает все настройки и использует прежние defaults (`xfs`,
+`openrc`, `@world=no`).
+
 ## Порядок настройки
 
 Мастер сначала собирает все параметры на восьми последовательных страницах:
