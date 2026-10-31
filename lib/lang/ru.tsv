@@ -886,3 +886,41 @@ Format	Форматировать
 The installation will continue from the next unfinished step without further questions.	Установка продолжится со следующего незавершённого этапа без дополнительных вопросов.
 Boot: %s · Disk: %s · Kernel: %s · Desktop: %s · User: %s	Загрузка: %s · Диск: %s · Ядро: %s · Графика: %s · Пользователь: %s
 root only	только root
+A desktop Portage profile is selected, but no desktop environment is configured.	Выбран профиль Portage для графической системы, но графическое окружение не выбрано.
+VIDEO_CARDS is set, but no desktop environment is configured.	VIDEO_CARDS задан, но графическое окружение не выбрано.
+The GNOME Portage profile is selected, but the desktop environment is %s.	Выбран профиль Portage GNOME, но графическое окружение: %s.
+The KDE Portage profile is selected, but this installer only configures XFCE or GNOME.	Выбран профиль Portage KDE, но установщик настраивает только XFCE или GNOME.
+The hardened profile with a desktop environment may need manual USE adjustments.	Профиль hardened с графическим окружением может потребовать ручной настройки USE.
+No VIDEO_CARDS are set; Xorg may run without acceleration.	VIDEO_CARDS не задан; Xorg может работать без ускорения.
+A desktop environment is selected, but no regular user is created; you will log in as root.	Выбрано графическое окружение, но обычный пользователь не создаётся; вход будет под root.
+SSH is enabled, but network configuration is set to none.	SSH включён, но настройка сети выбрана «none».
+Manual kernel configuration remains interactive and requires the correct storage, filesystem and graphics drivers. Choose a binary kernel if unsure.	Ручная настройка ядра остаётся интерактивной и требует правильных драйверов диска, файловой системы и графики. Если не уверены, выберите бинарное ядро.
+desktop Stage3	Stage3 для графической системы
+Init system and Stage3	Система инициализации и Stage3
+OpenRC or systemd; the desktop Stage3 follows the desktop choice automatically	OpenRC или systemd; Stage3 для графической системы выбирается автоматически вместе с графическим окружением
+Portage profile (derived)	Профиль Portage (вычисляется)
+Usually derived from the init system and desktop; change only if needed	Обычно вычисляется из системы инициализации и графического окружения; меняйте только при необходимости
+Choose OpenRC or systemd. A desktop Stage3 is selected automatically when a desktop environment is chosen.	Выберите OpenRC или systemd. Stage3 для графической системы выбирается автоматически при выборе графического окружения.
+Classic Gentoo init system	Классическая система инициализации Gentoo
+systemd init system	Система инициализации systemd
+Detected automatically; Enter to choose	Определяется автоматически; Enter — выбрать
+Choose the GPU drivers used by Portage. Automatic detection is recommended.	Выберите драйверы GPU для Portage. Рекомендуется автоматическое определение.
+Detect automatically	Определить автоматически
+Detected: %s	Обнаружено: %s
+not detected	не обнаружено
+Integrated Intel graphics	Встроенная графика Intel
+Modern AMD GPUs (amdgpu + radeonsi)	Современные GPU AMD (amdgpu + radeonsi)
+Open-source NVIDIA driver	Открытый драйвер NVIDIA
+Proprietary nvidia-drivers	Проприетарные nvidia-drivers
+VMware SVGA (vmwgfx)	VMware SVGA (vmwgfx)
+QEMU virtual display	Виртуальный дисплей QEMU
+virtio-gpu with virgl	virtio-gpu с virgl
+No acceleration	Без ускорения
+Use the Xorg modesetting driver	Использовать драйвер modesetting Xorg
+Custom value	Своё значение
+Enter VIDEO_CARDS manually	Ввести VIDEO_CARDS вручную
+No GPU detected	GPU не обнаружен
+No supported GPU was detected; Xorg will use the modesetting driver.	Поддерживаемый GPU не обнаружен; Xorg будет использовать драйвер modesetting.
+Configuration warnings:	Предупреждения конфигурации:
+Continue anyway	Продолжить всё равно
+Choose OpenRC or systemd, then the Stage3 source and package build settings	Выберите OpenRC или systemd, затем источник Stage3 и параметры сборки пакетов

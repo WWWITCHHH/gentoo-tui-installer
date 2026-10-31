@@ -119,16 +119,16 @@ DISK=""
 
 | Ключ | Допустимые значения | По умолчанию | Назначение |
 |---|---|---|---|
-| `STAGE_FLAVOR` | `openrc`, `systemd`, `desktop-openrc`, `desktop-systemd` | `openrc` | Вариант stage3. |
+| `STAGE_FLAVOR` | `openrc`, `systemd`, `desktop-openrc`, `desktop-systemd` | `openrc` | Вариант stage3; `desktop-*` подставляется автоматически при выборе графики. |
 | `MIRROR` | HTTP(S)-URL | `https://distfiles.gentoo.org` | Базовый URL зеркала distfiles. |
 | `STAGE_URL` | HTTP(S)-URL или пусто | пусто | Прямой URL stage3 вместо latest-stage3. |
-| `PROFILE` | `stage`, `desktop`, `gnome`, `kde`, `hardened` | `stage` | Профиль Portage. |
+| `PROFILE` | `stage`, `desktop`, `gnome`, `kde`, `hardened` | `stage` | Профиль Portage; обычно вычисляется из init-системы и графики. |
 | `DESKTOP` | `none`, `xfce`, `gnome` | `none` | Графическое окружение; `none` — не устанавливать. |
 | `CPU_FLAGS` | `yes`, `no` | `yes` | Определять `CPU_FLAGS_X86` через `cpuid2cpuflags`. |
 | `UPDATE_WORLD` | `yes`, `no` | `no` | Выполнять `emerge --update --deep --newuse @world`. |
 | `MAKE_JOBS` | `auto` или целое 1–256 | `auto` | Число задач `make`. |
 | `CFLAGS` | строка без кавычек и переводов строк | `-march=native -O2 -pipe` | Флаги компилятора. |
-| `VIDEO_CARDS` | токены через пробел или пусто | пусто | Драйверы GPU для Portage. |
+| `VIDEO_CARDS` | токены через пробел или пусто | автоопределение при новой установке | Драйверы GPU для Portage; в TUI выбираются из списка или задаются вручную. |
 | `USE_EXTRA` | USE-токены через пробел или пусто | пусто | Дополнительные USE-флаги. |
 
 При `STAGE_FLAVOR=desktop-*` профиль автоматически становится `desktop`, если
@@ -183,7 +183,7 @@ LightDM и GDM требуют ровно один из `elogind`/`systemd` (эт
 | `CRON` | `yes`, `no` | `yes` | Установить и включить cronie. |
 | `CHRONY` | `yes`, `no` | `yes` | Установить и включить chronyd. |
 | `SYSLOG` | `yes`, `no` | `yes` | Установить sysklogd (OpenRC) или rsyslog (systemd). |
-| `SUDO` | `yes`, `no` | `yes` | Установить sudo и правило для `wheel`. |
+| `SUDO` | `yes`, `no` | `yes` | Установить sudo и правило для `wheel`; настраивается на странице «Пользователи». |
 | `USERNAME` | имя пользователя | пусто | Имя обычного пользователя; задаётся, только если `CREATE_USER="yes"`. |
 | `CREATE_USER` | `yes`, `no` | `no` | Создавать обычного пользователя; по умолчанию аккаунт не создаётся. |
 
@@ -202,11 +202,20 @@ LightDM и GDM требуют ровно один из `elogind`/`systemd` (эт
 -> Службы -> Графика -> Проверка и установка
 ```
 
+На странице «Stage3 и сборка» выбирается система инициализации OpenRC или
+systemd; Stage3 `desktop-*` подставляется автоматически, если выбрано
+графическое окружение. `VIDEO_CARDS` на новой установке определяется по
+видимому GPU; на странице «Графика» его можно выбрать из списка или ввести своё
+значение.
+
 На каждой странице стрелки перемещают фокус по полям, `Enter` открывает
 редактор или окно выбора, `Esc` возвращает назад. С панели действий доступны
 `<Back>`, `<Next>`, `<Save>` (F2), `<Help>` (F1) и `<Exit>` (F10). После
 подтверждения на странице проверки установка выполняется непрерывно; вопросы
-между этапами не задаются.
+между этапами не задаются. Перед подтверждением проверяются противоречивые
+сочетания (профиль и графика, отсутствие `VIDEO_CARDS`, SSH без сети, ручное
+ядро); при их наличии показывается предупреждение с явным выбором
+«Продолжить всё равно».
 
 ## Производные поля
 
@@ -215,6 +224,8 @@ LightDM и GDM требуют ровно один из `elogind`/`systemd` (эт
 
 - `CFG_INIT` = `systemd`, если вариант stage3 содержит `systemd`, иначе
   `openrc`;
+- при выбранном `DESKTOP` (не `none`) `STAGE_FLAVOR` становится
+  `desktop-openrc` или `desktop-systemd` в соответствии с `CFG_INIT`;
 - профиль `desktop` подставляется для desktop-stage3 только при
   `PROFILE="stage"`;
 - `DESKTOP=xfce` выбирает `desktop`, если профиль был `stage`;
