@@ -94,6 +94,51 @@ wizard_clear_partitions() {
     CFG_UUID_ESP="" CFG_UUID_BOOT="" CFG_UUID_SWAP="" CFG_UUID_ROOT="" CFG_UUID_HOME=""
 }
 
+# Easy mode applies its defaults only once for a brand-new configuration.
+# Existing values (including values created by advanced mode) are preserved.
+wizard_apply_mode_defaults() {
+    ((GI_MODE_DEFAULTS_APPLIED)) && return 0
+    GI_MODE_DEFAULTS_APPLIED=1
+    ((GI_EASY_MODE)) || return 0
+    ((GI_CONFIG_EXISTED)) && return 0
+    CFG_ROOT_FS=ext4
+    CFG_STAGE_FLAVOR=systemd
+    CFG_UPDATE_WORLD=yes
+    config_derived
+    config_save
+    log_info "easy mode defaults applied"
+}
+
+wizard_toggle_mode() {
+    if ((GI_EASY_MODE)); then
+        GI_EASY_MODE=0
+        log_info "installation mode: advanced"
+    else
+        GI_EASY_MODE=1
+        log_info "installation mode: easy"
+    fi
+}
+
+# Boot mode is hidden in easy mode unless its detected default conflicts with
+# the live firmware or the selected disk. In those cases the user must see and
+# change it rather than being stuck with an invalid configuration.
+wizard_easy_boot_mode_visible() {
+    ((GI_EASY_MODE)) || return 0
+    local efi_dir=${GI_FIRMWARE_EFI_DIR:-/sys/firmware/efi}
+    if [[ $CFG_BOOT_MODE == uefi && ! -d $efi_dir ]]; then
+        return 0
+    fi
+    if [[ $CFG_BOOT_MODE == bios && -d $efi_dir ]]; then
+        return 0
+    fi
+    if [[ $CFG_BOOT_MODE == bios && -n $CFG_DISK && -b $CFG_DISK ]]; then
+        local disk_mib
+        disk_mib=$(disk_size_mib "$CFG_DISK" 2>/dev/null || printf '0')
+        ((disk_mib > 2097152)) && return 0
+    fi
+    return 1
+}
+
 # Disk page -----------------------------------------------------------------
 
 wizard_disk_rows() {
@@ -122,21 +167,33 @@ wizard_disk_rows() {
             plan=$(T 'Plan error: %s' "$PLAN_ERROR")
         fi
     fi
-    UI_PAGE_ROWS=(
-        "boot|$(T 'Boot mode')|$boot|$(T 'UEFI + GPT or BIOS + MBR')"
-        "diskmode|$(T 'Partitioning mode')|$CFG_DISK_MODE|$(T 'Automatic layout or existing partitions')"
-        "disk|$(T 'Target disk')|$disk|$(T 'The selected disk will be wiped')"
-        "rootfs|$(T 'Root filesystem')|$CFG_ROOT_FS|$(T 'xfs, ext4 or btrfs')"
-        "homefs|$(T '/home filesystem')|$CFG_HOME_FS|$(T 'Used for a separate /home')"
-        "swap|$(T 'Swap')|$swap|$(T 'Automatic, none or a custom size')"
-        "home|$(T '/home')|$home|$(T 'Separate partition or part of root')"
-    )
-    [[ $CFG_DISK_MODE == manual ]] && UI_PAGE_ROWS+=(
-        "manual|$(T 'Assign partitions')|$(T 'Enter to configure')|$(T 'Choose existing partitions and formatting options')"
-    )
-    [[ -n $plan ]] && UI_PAGE_ROWS+=(
-        "plan|$(T 'Partition plan')|$plan|$(T 'Enter to inspect the layout')"
-    )
+    UI_PAGE_ROWS=()
+    if ! ((GI_EASY_MODE)) || wizard_easy_boot_mode_visible; then
+        UI_PAGE_ROWS+=("boot|$(T 'Boot mode')|$boot|$(T 'UEFI + GPT or BIOS + MBR')")
+    fi
+    if ! ((GI_EASY_MODE)) || [[ $CFG_DISK_MODE == manual ]]; then
+        UI_PAGE_ROWS+=("diskmode|$(T 'Partitioning mode')|$CFG_DISK_MODE|$(T 'Automatic layout or existing partitions')")
+    fi
+    UI_PAGE_ROWS+=("disk|$(T 'Target disk')|$disk|$(T 'The selected disk will be wiped')")
+    UI_PAGE_ROWS+=("rootfs|$(T 'Root filesystem')|$CFG_ROOT_FS|$(T 'xfs, ext4 or btrfs')")
+    if ! ((GI_EASY_MODE)) || [[ $CFG_HOME_MODE == separate ]]; then
+        UI_PAGE_ROWS+=("homefs|$(T '/home filesystem')|$CFG_HOME_FS|$(T 'Used for a separate /home')")
+    fi
+    UI_PAGE_ROWS+=("swap|$(T 'Swap')|$swap|$(T 'Automatic, none or a custom size')")
+    if ! ((GI_EASY_MODE)) || [[ $CFG_HOME_MODE == separate ]]; then
+        UI_PAGE_ROWS+=("home|$(T '/home')|$home|$(T 'Separate partition or part of root')")
+    fi
+    if ((!GI_EASY_MODE)) || [[ $CFG_DISK_MODE == manual ]]; then
+        UI_PAGE_ROWS+=(
+            "manual|$(T 'Assign partitions')|$(T 'Enter to configure')|$(T 'Choose existing partitions and formatting options')"
+        )
+    fi
+    if [[ -n $plan ]]; then
+        UI_PAGE_ROWS+=(
+            "plan|$(T 'Partition plan')|$plan|$(T 'Enter to inspect the layout')"
+        )
+    fi
+    return 0
 }
 
 wizard_disk_edit() {
@@ -305,8 +362,12 @@ wizard_system_rows() {
         "locale|$(T 'Locale')|$CFG_LOCALE|$(T 'For example en_US.UTF-8')"
         "keymap|$(T 'Console keymap')|$CFG_KEYMAP|$(T 'For example us or ru')"
         "hwclock|$(T 'Hardware clock')|$CFG_HWCLOCK|$(T 'UTC or local')"
-        "language|$(T 'Installer language')|$(i18n_language_label "${CFG_UI_LANGUAGE:-en}")|$(T 'English or Russian interface')"
     )
+    if ! ((GI_EASY_MODE)); then
+        UI_PAGE_ROWS+=(
+            "language|$(T 'Installer language')|$(i18n_language_label "${CFG_UI_LANGUAGE:-en}")|$(T 'English or Russian interface')"
+        )
+    fi
 }
 
 wizard_system_edit() {
@@ -381,15 +442,19 @@ wizard_build_rows() {
     esac
     UI_PAGE_ROWS=(
         "flavor|$(T 'Init system and Stage3')|$flavor|$(T 'OpenRC or systemd; the desktop Stage3 follows the desktop choice automatically')"
-        "mirror|$(T 'Mirror')|$CFG_MIRROR|$(T 'Base distfiles.gentoo.org URL')"
-        "stageurl|$(T 'Direct Stage3 URL')|${CFG_STAGE_URL:-$(T 'automatic')}|$(T 'Empty - use latest-stage3')"
-        "profile|$(T 'Portage profile (derived)')|$CFG_PROFILE|$(T 'Usually derived from the init system and desktop; change only if needed')"
-        "cpu|$(T 'CPU_FLAGS_X86')|$(wizard_bool_text "$CFG_CPU_FLAGS")|$(T 'Detect with cpuid2cpuflags')"
-        "world|$(T 'Update @world')|$(wizard_bool_text "$CFG_UPDATE_WORLD")|$(T 'Can take a long time')"
-        "jobs|$(T 'MAKEOPTS')|$jobs|$(T 'Number of parallel build jobs')"
-        "cflags|CFLAGS|$CFG_CFLAGS|$(T 'Compiler flags')"
-        "use|$(T 'Extra USE')|${CFG_USE_EXTRA:-$(T 'none')}|$(T 'Additional USE flags')"
     )
+    if ! ((GI_EASY_MODE)); then
+        UI_PAGE_ROWS+=(
+            "mirror|$(T 'Mirror')|$CFG_MIRROR|$(T 'Base distfiles.gentoo.org URL')"
+            "stageurl|$(T 'Direct Stage3 URL')|${CFG_STAGE_URL:-$(T 'automatic')}|$(T 'Empty - use latest-stage3')"
+            "profile|$(T 'Portage profile (derived)')|$CFG_PROFILE|$(T 'Usually derived from the init system and desktop; change only if needed')"
+            "cpu|$(T 'CPU_FLAGS_X86')|$(wizard_bool_text "$CFG_CPU_FLAGS")|$(T 'Detect with cpuid2cpuflags')"
+            "world|$(T 'Update @world')|$(wizard_bool_text "$CFG_UPDATE_WORLD")|$(T 'Can take a long time')"
+            "jobs|$(T 'MAKEOPTS')|$jobs|$(T 'Number of parallel build jobs')"
+            "cflags|CFLAGS|$CFG_CFLAGS|$(T 'Compiler flags')"
+            "use|$(T 'Extra USE')|${CFG_USE_EXTRA:-$(T 'none')}|$(T 'Additional USE flags')"
+        )
+    fi
 }
 
 wizard_build_edit() {
@@ -505,10 +570,14 @@ wizard_kernel_rows() {
     UI_PAGE_ROWS=(
         "mode|$(T 'Kernel installation method')|$mode|$(T 'Choose binary or compiled explicitly')"
         "firmware|linux-firmware|$(wizard_bool_text "$CFG_FIRMWARE")|$(T 'Needed for Wi-Fi, GPUs and more')"
-        "microcode|$(T 'CPU microcode')|$CFG_MICROCODE|$(T 'auto, none, intel or amd')"
-        "cmdline|$(T 'Kernel cmdline')|${CFG_KERNEL_CMDLINE:-$(T 'empty')}|$(T 'Additional kernel parameters')"
-        "boot|$(T 'Bootloader')|$CFG_BOOTLOADER|$(T 'Only GRUB is supported in this version')"
     )
+    if ! ((GI_EASY_MODE)); then
+        UI_PAGE_ROWS+=(
+            "microcode|$(T 'CPU microcode')|$CFG_MICROCODE|$(T 'auto, none, intel or amd')"
+            "cmdline|$(T 'Kernel cmdline')|${CFG_KERNEL_CMDLINE:-$(T 'empty')}|$(T 'Additional kernel parameters')"
+        )
+    fi
+    UI_PAGE_ROWS+=("boot|$(T 'Bootloader')|$CFG_BOOTLOADER|$(T 'Only GRUB is supported in this version')")
 }
 
 wizard_kernel_edit() {
@@ -728,12 +797,18 @@ wizard_page_services() {
 # Desktop page --------------------------------------------------------------
 
 wizard_desktop_rows() {
+    local video_note
     UI_PAGE_ROWS=(
         "desktop|$(T 'Desktop environment')|$(desktop_label)|$(T 'XFCE, GNOME or a console-only system')"
     )
     if desktop_is_enabled; then
+        if ((GI_EASY_MODE)) && [[ -n $CFG_VIDEO_CARDS ]]; then
+            video_note=$(T 'Auto-detected; switch to Advanced mode to change it')
+        else
+            video_note=$(T 'Detected automatically; Enter to choose')
+        fi
         UI_PAGE_ROWS+=(
-            "video|VIDEO_CARDS|${CFG_VIDEO_CARDS:-$(T 'not set')}|$(T 'Detected automatically; Enter to choose')"
+            "video|VIDEO_CARDS|${CFG_VIDEO_CARDS:-$(T 'not set')}|$video_note"
         )
     fi
 }
@@ -754,6 +829,11 @@ wizard_desktop_edit() {
             fi
             ;;
         video)
+            if ((GI_EASY_MODE)) && [[ -n $CFG_VIDEO_CARDS ]]; then
+                ui_msg "$(T 'VIDEO_CARDS')" \
+                    "$(T 'Detected automatically. Switch to Advanced mode to change it.')" || true
+                return 0
+            fi
             detected=$(hardware_detect_video_cards)
             case "$CFG_VIDEO_CARDS" in
                 ""|intel|"amdgpu radeonsi"|nouveau|nvidia|vmware|qxl|virgl)
@@ -925,6 +1005,7 @@ WIZARD_PAGES=(disk system build kernel users services desktop review)
 wizard_run_setup() {
     local i=0 rc=0 page
     local total=${#WIZARD_PAGES[@]}
+    wizard_apply_mode_defaults
     # A new pass through the settings requires a fresh final confirmation.
     GI_INSTALL_CONFIRMED=0
     GI_UNATTENDED=0
@@ -1087,6 +1168,8 @@ wizard_load_config() {
         return 0
     fi
     config_load "$path"
+    GI_CONFIG_EXISTED=1
+    GI_MODE_DEFAULTS_APPLIED=1
     case "${CFG_UI_LANGUAGE:-en}" in
         en|ru) ;;
         *)
@@ -1106,7 +1189,7 @@ wizard_load_config() {
 
 wizard_about() {
     ui_header "$(T 'About')" "${GI_NAME} ${GI_VERSION}"
-    ui_wrap "$(T 'Gentoo Linux installer with a console interface.\n\nSupported: UEFI+GPT and BIOS+MBR, OpenRC and systemd,\nbinary, compiled and manual kernels, GRUB,\noptional XFCE + LightDM and GNOME + GDM.\nNot supported: LUKS, LVM, RAID, Secure Boot signing and dual boot.\n\nThis project is distributed under the MIT license.\nLogs: %s\nState: %s' "$GI_LOG_DIR" "$GI_STATE_FILE")"
+    ui_wrap "$(T 'Gentoo Linux installer with a console interface.\n\nSupported: UEFI+GPT and BIOS+MBR, OpenRC and systemd,\nbinary, compiled, automatic and manual kernels, GRUB,\noptional XFCE + LightDM and GNOME + GDM,\nEasy and Advanced configuration modes.\nNot supported: LUKS, LVM, RAID, Secure Boot signing and dual boot.\n\nThis project is distributed under the MIT license.\nLogs: %s\nState: %s' "$GI_LOG_DIR" "$GI_STATE_FILE")"
     ui_pause "$(T 'Enter - return')"
 }
 
@@ -1135,6 +1218,11 @@ wizard_main() {
                 items+=("install|$(T 'Configure and install')|$(T 'Collect all settings, confirm once, then install unattended')")
             fi
         fi
+        if ((GI_EASY_MODE)); then
+            items+=("mode|$(T 'Mode: Easy')|$(T 'Switch to Advanced mode')")
+        else
+            items+=("mode|$(T 'Mode: Advanced')|$(T 'Switch to Easy mode')")
+        fi
         items+=(
             "summary|$(T 'Check configuration')|$(T 'Show the summary and validation errors')"
             "load|$(T 'Load configuration')|$(T 'Read a KEY="value" file')"
@@ -1161,6 +1249,7 @@ wizard_main() {
                     fi
                 fi
                 ;;
+            mode) wizard_toggle_mode ;;
             summary) wizard_show_summary || true ;;
             load) wizard_load_config ;;
             save) ui_on_save ;;

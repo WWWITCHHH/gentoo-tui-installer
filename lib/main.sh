@@ -294,6 +294,7 @@ main() {
     elif ((GI_CONFIG_EXPLICIT)); then
         die "$(T 'configuration file not found: %s' "$GI_CONFIG_FILE")"
     fi
+    GI_CONFIG_EXISTED=$config_existed
 
     if ((GI_LANG_GIVEN)); then
         CFG_UI_LANGUAGE=$GI_LANG_REQUEST

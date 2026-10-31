@@ -150,6 +150,151 @@ services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
 assert_not_contains "$services_rows" "Install sudo" "services page has no duplicate sudo setting"
 assert_contains "$services_rows" "Network" "services page still lists the network"
 
+# ---------------------------------------------------------------------------
+# Easy and Advanced modes
+# ---------------------------------------------------------------------------
+config_defaults
+GI_EASY_MODE=1
+GI_CONFIG_EXISTED=0
+GI_MODE_DEFAULTS_APPLIED=0
+wizard_apply_mode_defaults
+assert_eq "ext4" "$CFG_ROOT_FS" "easy mode defaults to ext4"
+assert_eq "systemd" "$CFG_STAGE_FLAVOR" "easy mode defaults to systemd"
+assert_eq "yes" "$CFG_UPDATE_WORLD" "easy mode defaults to @world update"
+
+CFG_ROOT_FS=xfs
+CFG_STAGE_FLAVOR=openrc
+CFG_UPDATE_WORLD=no
+wizard_apply_mode_defaults
+assert_eq "xfs" "$CFG_ROOT_FS" "easy defaults are applied only once"
+assert_eq "openrc" "$CFG_STAGE_FLAVOR" "existing stage3 choice is preserved"
+assert_eq "no" "$CFG_UPDATE_WORLD" "existing @world choice is preserved"
+
+config_defaults
+GI_EASY_MODE=0
+GI_CONFIG_EXISTED=0
+GI_MODE_DEFAULTS_APPLIED=0
+wizard_apply_mode_defaults
+assert_eq "xfs" "$CFG_ROOT_FS" "advanced mode keeps the current root filesystem default"
+assert_eq "openrc" "$CFG_STAGE_FLAVOR" "advanced mode keeps the current stage3 default"
+assert_eq "no" "$CFG_UPDATE_WORLD" "advanced mode keeps the current @world default"
+
+config_defaults
+GI_EASY_MODE=1
+GI_CONFIG_EXISTED=1
+GI_MODE_DEFAULTS_APPLIED=0
+CFG_ROOT_FS=btrfs
+CFG_STAGE_FLAVOR=openrc
+CFG_UPDATE_WORLD=no
+wizard_apply_mode_defaults
+assert_eq "btrfs" "$CFG_ROOT_FS" "an existing configuration keeps its root filesystem"
+assert_eq "openrc" "$CFG_STAGE_FLAVOR" "an existing configuration keeps its stage3"
+assert_eq "no" "$CFG_UPDATE_WORLD" "an existing configuration keeps its @world choice"
+
+GI_EASY_MODE=1
+wizard_toggle_mode
+assert_eq "0" "$GI_EASY_MODE" "mode toggle switches to advanced"
+wizard_toggle_mode
+assert_eq "1" "$GI_EASY_MODE" "mode toggle switches back to easy"
+
+# Easy mode hides advanced rows but keeps the target disk visible.
+config_defaults
+GI_EASY_MODE=1
+CFG_BOOT_MODE=uefi
+CFG_DISK_MODE=auto
+CFG_HOME_MODE=no
+CFG_HOME_MIB=0
+mode_efi=$(mktemp -d "${TMPDIR:-/tmp}/gi-efi.XXXXXX")
+GI_FIRMWARE_EFI_DIR=$mode_efi
+wizard_disk_rows
+disk_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$disk_rows" "Target disk" "easy mode keeps the target disk visible"
+assert_contains "$disk_rows" "Root filesystem" "easy mode keeps the root filesystem"
+assert_contains "$disk_rows" "Swap" "easy mode keeps swap"
+assert_not_contains "$disk_rows" "Boot mode" "easy mode hides a non-conflicting boot mode"
+assert_not_contains "$disk_rows" "Partitioning mode" "easy mode hides the partitioning mode"
+assert_not_contains "$disk_rows" "/home" "easy mode hides /home"
+CFG_HOME_MODE=separate
+wizard_disk_rows
+disk_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$disk_rows" "/home filesystem" "easy mode shows /home filesystem when /home is separate"
+assert_contains "$disk_rows" "/home" "easy mode shows /home when it is separate"
+CFG_HOME_MODE=no
+CFG_DISK_MODE=manual
+wizard_disk_rows
+disk_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$disk_rows" "Partitioning mode" "easy mode shows the partitioning mode for a manual layout"
+assert_contains "$disk_rows" "Assign partitions" "easy mode shows manual partition assignment"
+CFG_DISK_MODE=auto
+CFG_BOOT_MODE=bios
+wizard_disk_rows
+disk_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$disk_rows" "Boot mode" "easy mode shows a conflicting boot mode"
+GI_EASY_MODE=0
+CFG_BOOT_MODE=uefi
+wizard_disk_rows
+disk_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$disk_rows" "Boot mode" "advanced mode shows the boot mode"
+assert_contains "$disk_rows" "Partitioning mode" "advanced mode shows the partitioning mode"
+assert_contains "$disk_rows" "/home" "advanced mode shows /home"
+unset GI_FIRMWARE_EFI_DIR
+rm -rf -- "$mode_efi"
+
+# Page filters.
+config_defaults
+GI_EASY_MODE=1
+wizard_system_rows
+system_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_not_contains "$system_rows" "Installer language" "easy mode hides the language row"
+GI_EASY_MODE=0
+wizard_system_rows
+system_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$system_rows" "Installer language" "advanced mode shows the language row"
+
+GI_EASY_MODE=1
+wizard_build_rows
+build_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$build_rows" "Init system and Stage3" "easy mode shows the init system"
+assert_not_contains "$build_rows" "Mirror" "easy mode hides the mirror"
+assert_not_contains "$build_rows" "CFLAGS" "easy mode hides CFLAGS"
+GI_EASY_MODE=0
+wizard_build_rows
+build_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$build_rows" "Mirror" "advanced mode shows the mirror"
+assert_contains "$build_rows" "CFLAGS" "advanced mode shows CFLAGS"
+
+GI_EASY_MODE=1
+wizard_kernel_rows
+kernel_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$kernel_rows" "Kernel installation method" "easy mode shows the kernel method"
+assert_not_contains "$kernel_rows" "CPU microcode" "easy mode hides microcode"
+assert_not_contains "$kernel_rows" "Kernel cmdline" "easy mode hides the kernel cmdline"
+GI_EASY_MODE=0
+wizard_kernel_rows
+kernel_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$kernel_rows" "CPU microcode" "advanced mode shows microcode"
+assert_contains "$kernel_rows" "Kernel cmdline" "advanced mode shows the kernel cmdline"
+
+# VIDEO_CARDS is read-only in easy mode only when detection produced a value.
+config_defaults
+GI_EASY_MODE=1
+CFG_DESKTOP=xfce
+CFG_VIDEO_CARDS=intel
+wizard_desktop_rows
+desktop_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$desktop_rows" "Advanced mode" "easy mode marks a detected VIDEO_CARDS value as read-only"
+CFG_VIDEO_CARDS=""
+wizard_desktop_rows
+desktop_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$desktop_rows" "Enter to choose" "easy mode allows choosing when detection is empty"
+MODE_MESSAGE=""
+ui_msg() { MODE_MESSAGE=$1; }
+ui_choice() { return 99; }
+GI_EASY_MODE=1
+CFG_VIDEO_CARDS=intel
+assert_ok "easy mode refuses to edit a detected VIDEO_CARDS" wizard_desktop_edit video
+assert_eq "VIDEO_CARDS" "$MODE_MESSAGE" "read-only VIDEO_CARDS shows an explanation"
+
 # The final confirmation must show consistency warnings and use an explicit
 # "Continue anyway" label when the configuration is suspicious.
 UI_MODAL_TITLE=""

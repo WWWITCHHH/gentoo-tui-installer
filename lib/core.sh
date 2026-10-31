@@ -34,6 +34,11 @@ GI_UNATTENDED=0
 GI_MANUAL_OPTIONS_READY=0
 GI_ROOT_PASSWORD=""
 GI_USER_PASSWORD=""
+# Installation UI mode: easy is the default on every start; advanced exposes
+# all settings. The mode is session-only and is toggled from the main menu.
+GI_EASY_MODE=1
+GI_MODE_DEFAULTS_APPLIED=0
+GI_CONFIG_EXISTED=0
 
 CONFIG_KEYS=(
     SCHEMA UI_LANGUAGE
