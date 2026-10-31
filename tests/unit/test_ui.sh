@@ -61,6 +61,24 @@ assert_eq "save" "$(read_key_for $'\x13')" "Ctrl-S saves the configuration"
 assert_eq "exit_action" "$(read_key_for $'\e[21~')" "F10 exits the current menu"
 assert_eq "esc" "$(read_key_for $'\e')" "Esc returns"
 assert_eq "enter" "$(read_key_for $'\n')" "Enter selects"
+assert_eq "left" "$(read_key_for $'\e[1;2D')" "modified LEFT arrow is decoded"
+assert_eq "unknown" "$(read_key_for $'\e[1;9X')" "unknown escape sequence is ignored, not Esc"
+
+read_keys_for() {
+    local sequence=$1 out=""
+    printf '%s' "$sequence" | {
+        local i
+        for i in 1 2 3; do
+            ui_read_key || break
+            out+="${UI_KEY} "
+        done
+        printf '%s' "$out"
+    }
+}
+assert_eq "left left left " "$(read_keys_for $'\e[D\e[D\e[D')" \
+    "a burst of LEFT arrows is decoded one by one"
+assert_eq "left left left " "$(read_keys_for $'\eOD\eOD\eOD')" \
+    "a burst of application-mode LEFT arrows is decoded one by one"
 
 # ---------------------------------------------------------------------------
 # Standardized choice markers and choice windows
@@ -101,6 +119,11 @@ mock_keys down enter enter
 assert_ok "Enter does not change a single choice" \
     ui_choice single "Title" "Subtitle" a "a|Alpha|" "b|Beta|" >/dev/null
 assert_eq "a" "$UI_RESULT" "only Space changes a single choice"
+
+mock_keys left enter enter
+assert_ok "LEFT arrow does not cancel a choice window" \
+    ui_choice single "Title" "Subtitle" a "a|Alpha|" "b|Beta|" >/dev/null
+assert_eq "a" "$UI_RESULT" "LEFT on the content is ignored"
 
 mock_keys esc
 assert_fail "single choice can be cancelled" \

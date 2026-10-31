@@ -171,14 +171,26 @@ ui_read_key() {
     IFS= read -rsn1 UI_KEY || return 1
     if [[ $UI_KEY == $'\e' ]]; then
         local seq="" ch
+        # Read one complete escape sequence. Stop as soon as the sequence is
+        # complete so that a burst of arrow keys is not glued into one unknown
+        # sequence (which used to be misread as Esc and closed the screen).
         while IFS= read -rsn1 -t 0.04 ch; do
             seq+=$ch
+            case "$seq" in
+                '[A'|'OA'|'[B'|'OB'|'[C'|'OC'|'[D'|'OD') break ;;
+                '[H'|'OH'|'[F'|'OF') break ;;
+                '[1~'|'[3~'|'[4~'|'[5~'|'[6~'|'[7~'|'[8~'|'[11~'|'[12~'|'[21~') break ;;
+                'OP'|'OQ'|'[Z'|'[[A'|'[[B') break ;;
+                '[1;'*[ABCD]) break ;;
+                '['|'O'|'[['|'[1'|'[2'|'[3'|'[4'|'[5'|'[6'|'[7'|'[8'|'[11'|'[12'|'[21'|'[1;'*) continue ;;
+                *) break ;;
+            esac
         done
         case "$seq" in
-            '[A'|'OA') UI_KEY=up ;;
-            '[B'|'OB') UI_KEY=down ;;
-            '[C'|'OC') UI_KEY=right ;;
-            '[D'|'OD') UI_KEY=left ;;
+            '[A'|'OA'|'[1;'*A) UI_KEY=up ;;
+            '[B'|'OB'|'[1;'*B) UI_KEY=down ;;
+            '[C'|'OC'|'[1;'*C) UI_KEY=right ;;
+            '[D'|'OD'|'[1;'*D) UI_KEY=left ;;
             '[H'|'OH'|'[1~'|'[7~') UI_KEY=home ;;
             '[F'|'OF'|'[4~'|'[8~') UI_KEY=end ;;
             'OP'|'[11~'|'[[A') UI_KEY=help ;;
@@ -186,7 +198,9 @@ ui_read_key() {
             '[21~') UI_KEY=exit_action ;;
             '[Z') UI_KEY=backtab ;;
             '') UI_KEY=esc ;;
-            *) UI_KEY=esc ;;
+            # An unrecognized sequence is ignored by the screens. Treating it
+            # as Esc would close the current screen unexpectedly.
+            *) UI_KEY=unknown ;;
         esac
     elif [[ -z $UI_KEY ]]; then
         UI_KEY=enter
@@ -630,7 +644,7 @@ ui_input() {
             save)
                 ui_save_action
                 ;;
-            esc|left|exit_action)
+            esc|exit_action)
                 UI_CANCELLED=1
                 return 1
                 ;;
