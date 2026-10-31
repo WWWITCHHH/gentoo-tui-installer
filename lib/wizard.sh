@@ -498,6 +498,7 @@ wizard_kernel_rows() {
     case "$CFG_KERNEL_MODE" in
         bin) mode="$(T 'Binary (gentoo-kernel-bin)')" ;;
         dist) mode="$(T 'Compiled (gentoo-kernel)')" ;;
+        auto) mode="$(T 'Automatic (generated config)')" ;;
         manual) mode="$(T 'Manual (gentoo-sources + menuconfig)')" ;;
         *) mode="$(T 'not selected')" ;;
     esac
@@ -518,6 +519,7 @@ wizard_kernel_edit() {
                 "$(T 'Choose how to obtain the kernel')" "$CFG_KERNEL_MODE" \
                 "bin|$(T 'Binary (gentoo-kernel-bin)')|$(T 'Prebuilt binary kernel, fast')" \
                 "dist|$(T 'Compiled (gentoo-kernel)')|$(T 'Built with the Gentoo configuration')" \
+                "auto|$(T 'Automatic (generated config)')|$(T 'gentoo-sources with a .config generated from this hardware; no menuconfig')" \
                 "manual|$(T 'Manual (gentoo-sources)')|$(T 'Configuration with menuconfig; this step remains interactive')" || true
             ;;
         firmware)
@@ -545,9 +547,9 @@ wizard_kernel_edit() {
 
 wizard_kernel_validate() {
     case "$CFG_KERNEL_MODE" in
-        bin|dist|manual) ;;
+        bin|dist|auto|manual) ;;
         *)
-            UI_PAGE_MESSAGE=$(T 'Choose the binary or compiled kernel explicitly.')
+            UI_PAGE_MESSAGE=$(T 'Choose the binary, compiled or automatic kernel explicitly.')
             return 1
             ;;
     esac
@@ -567,7 +569,7 @@ wizard_kernel_validate() {
 
 wizard_page_kernel() {
     local body
-    body=$(T 'The kernel is an explicit choice: a prebuilt binary or a kernel compiled on the target system. Manual configuration keeps menuconfig interactive.')
+    body=$(T 'The kernel is an explicit choice: a prebuilt binary, a kernel compiled with the Gentoo configuration, an automatically generated configuration, or manual menuconfig. Only manual configuration remains interactive.')
     ui_page_run "$(T 'Kernel and bootloader')" "$body" \
         wizard_kernel_rows wizard_kernel_edit wizard_kernel_validate
 }

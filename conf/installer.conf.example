@@ -108,8 +108,10 @@ USE_EXTRA=""            # additional USE flags, space separated
 # Kernel and bootloader
 # ---------------------------------------------------------------------------
 
-# bin: sys-kernel/gentoo-kernel-bin
-# dist: sys-kernel/gentoo-kernel (distribution configuration, compiled)
+# bin: sys-kernel/gentoo-kernel-bin (prebuilt)
+# dist: sys-kernel/gentoo-kernel (Gentoo configuration, compiled)
+# auto: sys-kernel/gentoo-sources with a .config generated from this hardware
+#       (no menuconfig; live /proc/config.gz or make defconfig as the base)
 # manual: sys-kernel/gentoo-sources + make menuconfig
 # There is no implicit default on a new install: choose the method explicitly
 # on the kernel page or set it here. "bin" below is an example value.

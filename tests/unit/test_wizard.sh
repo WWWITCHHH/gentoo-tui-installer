@@ -97,11 +97,15 @@ assert_eq "no" "$CFG_CREATE_USER" "no account is created by default"
 assert_eq "" "$CFG_USERNAME" "no user name is invented by default"
 
 assert_fail "kernel validation rejects an unset method" wizard_kernel_validate
-assert_eq "Choose the binary or compiled kernel explicitly." "$UI_PAGE_MESSAGE"
+assert_eq "Choose the binary, compiled or automatic kernel explicitly." "$UI_PAGE_MESSAGE"
 CFG_KERNEL_MODE=bin
 assert_ok "kernel validation accepts binary" wizard_kernel_validate
 CFG_KERNEL_MODE=dist
 assert_ok "kernel validation accepts compiled" wizard_kernel_validate
+CFG_KERNEL_MODE=auto
+assert_ok "kernel validation accepts the automatic generated config" wizard_kernel_validate
+CFG_KERNEL_MODE=manual
+assert_ok "kernel validation accepts manual" wizard_kernel_validate
 
 config_defaults
 STATE_DONE=()

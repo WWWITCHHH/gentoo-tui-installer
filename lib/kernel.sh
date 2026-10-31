@@ -112,14 +112,289 @@ kernel_install_distribution() {
         emerge --ask=n --quiet sys-kernel/gentoo-kernel || return 1
 }
 
-kernel_install_manual() {
-    local jobs cmd
+kernel_install_build_dependencies() {
     chroot_run "$(T 'Installing kernel build dependencies')" \
         emerge --ask=n --quiet sys-devel/bc sys-devel/flex sys-devel/bison \
         dev-libs/elfutils sys-libs/ncurses dev-util/pahole dev-libs/openssl || return 1
+}
+
+kernel_install_sources() {
     chroot_run "$(T 'Installing kernel sources')" \
         emerge --ask=n --quiet sys-kernel/gentoo-sources || return 1
     chroot_run "$(T 'Selecting kernel sources')" eselect kernel set 1 || return 1
+}
+
+kernel_build_and_install() {
+    local jobs cmd
+    jobs=$(portage_make_jobs)
+    cmd="cd /usr/src/linux && make -j${jobs} && make modules_install && make install"
+    chroot_shell "$(T 'Building and installing the kernel')" "$cmd" || return 1
+}
+
+# Starts the automatic configuration from the live kernel when possible: the
+# running Minimal CD kernel has already booted on this hardware. Otherwise use
+# the architecture defconfig, which is a broad and safe base.
+kernel_auto_config_base() {
+    local config="$GI_ROOT/usr/src/linux/.config"
+    if [[ -r /proc/config.gz ]] && command_exists gzip; then
+        if gzip -dc /proc/config.gz >"$config"; then
+            log_info "auto kernel config base: live /proc/config.gz"
+            return 0
+        fi
+        log_warn "could not read /proc/config.gz; falling back to defconfig"
+    fi
+    chroot_run "$(T 'Generating the default kernel configuration')" \
+        /bin/bash -lc 'cd /usr/src/linux && make defconfig' || return 1
+    log_info "auto kernel config base: make defconfig"
+}
+
+# Options required for the target disk, root filesystem, console, init system
+# and the selected graphics stack. The list deliberately keeps boot-critical
+# drivers built in; GPU and network drivers can remain modules.
+kernel_auto_config_options() {
+    printf '%s %s\n' \
+        CONFIG_SCSI y \
+        CONFIG_BLK_DEV_SD y \
+        CONFIG_ATA y \
+        CONFIG_SATA_AHCI y \
+        CONFIG_ATA_PIIX y \
+        CONFIG_BLK_DEV_NVME y \
+        CONFIG_VIRTIO y \
+        CONFIG_VIRTIO_PCI y \
+        CONFIG_VIRTIO_BLK y \
+        CONFIG_SCSI_VIRTIO y \
+        CONFIG_USB_STORAGE m \
+        CONFIG_EXT4_FS y \
+        CONFIG_XFS_FS y \
+        CONFIG_BTRFS_FS y \
+        CONFIG_VFAT_FS y \
+        CONFIG_FAT_FS y \
+        CONFIG_NLS_CODEPAGE_437 y \
+        CONFIG_NLS_ISO8859_1 y \
+        CONFIG_PARTITION_ADVANCED y \
+        CONFIG_MSDOS_PARTITION y \
+        CONFIG_EFI_PARTITION y \
+        CONFIG_PROC_FS y \
+        CONFIG_SYSFS y \
+        CONFIG_TMPFS y \
+        CONFIG_TMPFS_POSIX_ACL y \
+        CONFIG_TMPFS_XATTR y \
+        CONFIG_DEVTMPFS y \
+        CONFIG_DEVTMPFS_MOUNT y \
+        CONFIG_BLK_DEV_INITRD y \
+        CONFIG_RD_GZIP y \
+        CONFIG_RD_XZ y \
+        CONFIG_RD_ZSTD y \
+        CONFIG_VT y \
+        CONFIG_VT_CONSOLE y \
+        CONFIG_FB y \
+        CONFIG_FRAMEBUFFER_CONSOLE y \
+        CONFIG_DRM y \
+        CONFIG_DRM_FBDEV_EMULATION y \
+        CONFIG_DRM_SIMPLEDRM y \
+        CONFIG_INPUT y \
+        CONFIG_INPUT_EVDEV y \
+        CONFIG_INPUT_KEYBOARD y \
+        CONFIG_KEYBOARD_ATKBD y \
+        CONFIG_SERIO y \
+        CONFIG_SERIO_I8042 y \
+        CONFIG_HID y \
+        CONFIG_HID_GENERIC y \
+        CONFIG_USB y \
+        CONFIG_USB_SUPPORT y \
+        CONFIG_USB_XHCI_HCD y \
+        CONFIG_USB_EHCI_HCD y \
+        CONFIG_USB_OHCI_HCD y \
+        CONFIG_USB_UHCI_HCD y \
+        CONFIG_USB_HID y \
+        CONFIG_MODULES y \
+        CONFIG_BINFMT_ELF y \
+        CONFIG_BINFMT_SCRIPT y \
+        CONFIG_IA32_EMULATION y \
+        CONFIG_COMPAT_32BIT_TIME y \
+        CONFIG_PCI y \
+        CONFIG_PCI_MSI y \
+        CONFIG_ACPI y \
+        CONFIG_PRINTK y \
+        CONFIG_BUG y \
+        CONFIG_FW_LOADER y \
+        CONFIG_KEYS y \
+        CONFIG_SYSVIPC y \
+        CONFIG_POSIX_MQUEUE y \
+        CONFIG_NET y \
+        CONFIG_INET y \
+        CONFIG_PACKET y \
+        CONFIG_UNIX y \
+        CONFIG_IPV6 y \
+        CONFIG_VIRTIO_NET m \
+        CONFIG_E1000 m \
+        CONFIG_E1000E m \
+        CONFIG_VMXNET3 m \
+        CONFIG_R8169 m
+
+    if [[ $CFG_BOOT_MODE == uefi ]]; then
+        printf '%s %s\n' \
+            CONFIG_EFI y \
+            CONFIG_EFI_STUB y \
+            CONFIG_EFI_PARTITION y \
+            CONFIG_EFIVAR_FS y \
+            CONFIG_FB_EFI y
+    else
+        printf '%s %s\n' \
+            CONFIG_VGA_CONSOLE y \
+            CONFIG_PARTITION_ADVANCED y
+    fi
+
+    if [[ ${CFG_INIT:-openrc} == systemd ]]; then
+        printf '%s %s\n' \
+            CONFIG_CGROUPS y \
+            CONFIG_CGROUP_SCHED y \
+            CONFIG_CGROUP_CPUACCT y \
+            CONFIG_CGROUP_FREEZER y \
+            CONFIG_CGROUP_DEVICE y \
+            CONFIG_CGROUP_PIDS y \
+            CONFIG_NAMESPACES y \
+            CONFIG_UTS_NS y \
+            CONFIG_IPC_NS y \
+            CONFIG_PID_NS y \
+            CONFIG_NET_NS y \
+            CONFIG_SECCOMP y \
+            CONFIG_SECCOMP_FILTER y \
+            CONFIG_FANOTIFY y \
+            CONFIG_INOTIFY_USER y \
+            CONFIG_EPOLL y \
+            CONFIG_SIGNALFD y \
+            CONFIG_TIMERFD y \
+            CONFIG_EVENTFD y \
+            CONFIG_AIO y \
+            CONFIG_KCMP y
+    fi
+
+    printf '%s %s\n' CONFIG_MICROCODE y
+    case "$(kernel_cpu_vendor)" in
+        intel) printf '%s %s\n' CONFIG_MICROCODE_INTEL y ;;
+        amd) printf '%s %s\n' CONFIG_MICROCODE_AMD y ;;
+    esac
+
+    local card
+    for card in $CFG_VIDEO_CARDS; do
+        case "$card" in
+            intel|i915) printf '%s %s\n' CONFIG_DRM_I915 m ;;
+            amdgpu|radeonsi) printf '%s %s\n' CONFIG_DRM_AMDGPU m ;;
+            nouveau) printf '%s %s\n' CONFIG_DRM_NOUVEAU m ;;
+            vmware) printf '%s %s\n' CONFIG_DRM_VMWGFX m ;;
+            qxl) printf '%s %s\n' CONFIG_DRM_QXL m ;;
+            virgl) printf '%s %s\n' CONFIG_DRM_VIRTIO_GPU m ;;
+            # The proprietary driver builds its own module; avoid nouveau.
+            nvidia) printf '%s %s\n' CONFIG_DRM_NOUVEAU n ;;
+        esac
+    done
+}
+
+# Symbols that must be present after olddefconfig. They are all built in by
+# kernel_auto_config_options, so accepting y or m still catches a missing
+# driver without forcing the initramfs to carry boot-critical modules.
+kernel_auto_required_symbols() {
+    printf '%s\n' \
+        CONFIG_SCSI \
+        CONFIG_BLK_DEV_SD \
+        CONFIG_ATA \
+        CONFIG_SATA_AHCI \
+        CONFIG_BLK_DEV_NVME \
+        CONFIG_VIRTIO \
+        CONFIG_VIRTIO_PCI \
+        CONFIG_VIRTIO_BLK \
+        CONFIG_EXT4_FS \
+        CONFIG_XFS_FS \
+        CONFIG_BTRFS_FS \
+        CONFIG_VFAT_FS \
+        CONFIG_PROC_FS \
+        CONFIG_SYSFS \
+        CONFIG_TMPFS \
+        CONFIG_DEVTMPFS \
+        CONFIG_DEVTMPFS_MOUNT \
+        CONFIG_BLK_DEV_INITRD \
+        CONFIG_VT \
+        CONFIG_FB \
+        CONFIG_FRAMEBUFFER_CONSOLE \
+        CONFIG_DRM \
+        CONFIG_DRM_FBDEV_EMULATION \
+        CONFIG_DRM_SIMPLEDRM \
+        CONFIG_INPUT_EVDEV \
+        CONFIG_INPUT_KEYBOARD \
+        CONFIG_USB_XHCI_HCD \
+        CONFIG_MODULES \
+        CONFIG_IA32_EMULATION
+    if [[ $CFG_BOOT_MODE == uefi ]]; then
+        printf '%s\n' CONFIG_EFI CONFIG_EFI_STUB CONFIG_EFI_PARTITION CONFIG_FB_EFI
+    else
+        printf '%s\n' CONFIG_VGA_CONSOLE
+    fi
+    if [[ ${CFG_INIT:-openrc} == systemd ]]; then
+        printf '%s\n' CONFIG_CGROUPS
+    fi
+}
+
+kernel_auto_config_apply() {
+    local script="cd /usr/src/linux" symbol state
+    # Neutralise settings inherited from the live kernel that could make the
+    # target build or boot depend on live-CD paths or module compression.
+    script+=" && scripts/config --file .config --set-str CONFIG_INITRAMFS_SOURCE ''"
+    script+=" && scripts/config --file .config --set-str CONFIG_SYSTEM_TRUSTED_KEYS ''"
+    script+=" && scripts/config --file .config --set-str CONFIG_SYSTEM_REVOCATION_KEYS ''"
+    script+=" && scripts/config --file .config --set-str CONFIG_MODULE_SIG_KEY 'certs/signing_key.pem'"
+    script+=" && scripts/config --file .config --set-str CONFIG_CMDLINE ''"
+    script+=" && scripts/config --file .config --disable CONFIG_CMDLINE_BOOL"
+    script+=" && scripts/config --file .config --disable CONFIG_MODULE_COMPRESS"
+    script+=" && scripts/config --file .config --enable CONFIG_MODULE_COMPRESS_NONE"
+    script+=" && scripts/config --file .config --disable CONFIG_MODULE_COMPRESS_GZIP"
+    script+=" && scripts/config --file .config --disable CONFIG_MODULE_COMPRESS_XZ"
+    script+=" && scripts/config --file .config --disable CONFIG_MODULE_COMPRESS_ZSTD"
+    script+=" && scripts/config --file .config --disable CONFIG_MODULE_SIG_FORCE"
+    while read -r symbol state; do
+        case "$state" in
+            y) script+=" && scripts/config --file .config --enable $symbol" ;;
+            m) script+=" && scripts/config --file .config --module $symbol" ;;
+            n) script+=" && scripts/config --file .config --disable $symbol" ;;
+        esac
+    done < <(kernel_auto_config_options)
+    script+=" && make olddefconfig"
+    chroot_run "$(T 'Generating the kernel configuration')" /bin/bash -lc "$script" || return 1
+    log_info "auto kernel config: required options applied and olddefconfig completed"
+}
+
+kernel_auto_config_validate() {
+    local symbols script missing
+    if [[ ! -s "$GI_ROOT/usr/src/linux/.config" ]]; then
+        log_error "auto kernel config was not created"
+        ui_error "$(T 'Kernel configuration is incomplete')" \
+            "$(T 'The generated .config file was not created.')"
+        return 1
+    fi
+    symbols=$(kernel_auto_required_symbols | tr '\n' ' ')
+    script="cd /usr/src/linux && for s in $symbols; do grep -q \"^\$s=[ym]\" .config || printf '%s ' \"\$s\"; done"
+    missing=$(chroot_capture /bin/bash -lc "$script")
+    if [[ -n $missing ]]; then
+        log_error "auto kernel config missing required options: $missing"
+        ui_error "$(T 'Kernel configuration is incomplete')" \
+            "$(T 'The generated .config is missing required options: %s' "$missing")"
+        return 1
+    fi
+    log_info "auto kernel config validated"
+}
+
+kernel_install_auto() {
+    kernel_install_build_dependencies || return 1
+    kernel_install_sources || return 1
+    kernel_auto_config_base || return 1
+    kernel_auto_config_apply || return 1
+    kernel_auto_config_validate || return 1
+    kernel_build_and_install || return 1
+}
+
+kernel_install_manual() {
+    kernel_install_build_dependencies || return 1
+    kernel_install_sources || return 1
 
     ui_header "$(T 'Kernel configuration')" \
         "$(T 'make menuconfig will open now. Enable drivers for your hardware.\nSave the configuration and exit menuconfig to continue.')"
@@ -128,9 +403,7 @@ kernel_install_manual() {
     ui_interactive "make menuconfig" env LC_ALL=C LANG=C chroot "$GI_ROOT" \
         /bin/bash -lc 'cd /usr/src/linux && make menuconfig' || return 1
 
-    jobs=$(portage_make_jobs)
-    cmd="cd /usr/src/linux && make -j${jobs} && make modules_install && make install"
-    chroot_shell "$(T 'Building and installing the kernel')" "$cmd" || return 1
+    kernel_build_and_install || return 1
 }
 
 step_kernel() {
@@ -148,6 +421,7 @@ step_kernel() {
     case "$CFG_KERNEL_MODE" in
         bin) kernel_install_binary || return 1 ;;
         dist) kernel_install_distribution || return 1 ;;
+        auto) kernel_install_auto || return 1 ;;
         manual) kernel_install_manual || return 1 ;;
         *) die "$(T 'unknown kernel mode: %s' "$CFG_KERNEL_MODE")" ;;
     esac

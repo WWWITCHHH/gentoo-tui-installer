@@ -39,4 +39,39 @@ grub_defaults=$(<"$GI_ROOT/etc/default/grub")
 assert_contains "$grub_defaults" "GRUB_CMDLINE_LINUX='quiet foo'\\''bar'" \
     "GRUB defaults quote single quotes safely"
 
+# Automatic kernel configuration generated from the target settings.
+config_defaults
+CFG_BOOT_MODE=uefi
+CFG_INIT=systemd
+CFG_ROOT_FS=ext4
+CFG_VIDEO_CARDS="vmware intel"
+auto_options=$(kernel_auto_config_options)
+assert_contains "$auto_options" "CONFIG_EXT4_FS y" "automatic config enables ext4"
+assert_contains "$auto_options" "CONFIG_XFS_FS y" "automatic config enables xfs"
+assert_contains "$auto_options" "CONFIG_VIRTIO_BLK y" "automatic config enables virtio block"
+assert_contains "$auto_options" "CONFIG_DEVTMPFS_MOUNT y" "automatic config enables devtmpfs mount"
+assert_contains "$auto_options" "CONFIG_EFI_STUB y" "automatic config enables the EFI stub"
+assert_contains "$auto_options" "CONFIG_CGROUPS y" "automatic config enables systemd cgroups"
+assert_contains "$auto_options" "CONFIG_DRM_VMWGFX m" "automatic config includes VMware graphics"
+assert_contains "$auto_options" "CONFIG_DRM_I915 m" "automatic config includes Intel graphics"
+
+CFG_VIDEO_CARDS=nvidia
+auto_nvidia=$(kernel_auto_config_options)
+assert_contains "$auto_nvidia" "CONFIG_DRM_NOUVEAU n" "proprietary NVIDIA disables nouveau"
+
+auto_required=$(kernel_auto_required_symbols)
+assert_contains "$auto_required" "CONFIG_EXT4_FS" "required symbols include ext4"
+assert_contains "$auto_required" "CONFIG_EFI_STUB" "required symbols include the EFI stub"
+assert_contains "$auto_required" "CONFIG_CGROUPS" "required symbols include cgroups"
+
+CFG_BOOT_MODE=bios
+CFG_INIT=openrc
+CFG_VIDEO_CARDS=""
+auto_bios=$(kernel_auto_config_options)
+assert_contains "$auto_bios" "CONFIG_VGA_CONSOLE y" "BIOS automatic config enables VGA console"
+assert_contains "$auto_bios" "CONFIG_DRM_SIMPLEDRM y" "automatic config keeps a simple framebuffer"
+auto_bios_required=$(kernel_auto_required_symbols)
+assert_contains "$auto_bios_required" "CONFIG_VGA_CONSOLE" "BIOS required symbols include VGA console"
+assert_not_contains "$auto_bios_required" "CONFIG_EFI_STUB" "BIOS required symbols omit the EFI stub"
+
 finish_tests

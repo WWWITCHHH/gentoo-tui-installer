@@ -320,7 +320,7 @@ config_validate() {
         validation_error "$(T 'Desktop: %s.' "${VALIDATION_MESSAGE:-invalid}")"
 
     case "$CFG_KERNEL_MODE" in
-        bin|dist|manual) ;;
+        bin|dist|auto|manual) ;;
         *) validation_error "Unknown kernel installation method." ;;
     esac
 
