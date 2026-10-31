@@ -1,7 +1,8 @@
 # Gentoo TUI Installer configuration example.
 # Copy this file, edit the values and load it through the main menu or pass it
 # with --config. Passwords are never stored in this file: root and user
-# passwords are requested interactively during the system stage.
+# passwords are requested on the users page (or the review page) and kept in
+# process memory only.
 #
 # All values are double-quoted. Inline comments after the closing quote are
 # allowed. Unknown keys are rejected. SCHEMA must stay "1".
@@ -105,6 +106,8 @@ USE_EXTRA=""            # additional USE flags, space separated
 # bin: sys-kernel/gentoo-kernel-bin
 # dist: sys-kernel/gentoo-kernel (distribution configuration, compiled)
 # manual: sys-kernel/gentoo-sources + make menuconfig
+# There is no implicit default on a new install: choose the method explicitly
+# on the kernel page or set it here. "bin" below is an example value.
 KERNEL_MODE="bin"
 
 FIRMWARE="yes"          # install sys-kernel/linux-firmware
@@ -132,5 +135,6 @@ CRON="yes"              # install and enable cronie
 CHRONY="yes"            # install and enable chronyd
 SYSLOG="yes"            # sysklogd (OpenRC) or rsyslog (systemd)
 SUDO="yes"              # install sudo and allow the wheel group
+# The wizard asks before creating an account. Set CREATE_USER="no" to skip it.
 USERNAME="gentoo"
 CREATE_USER="yes"

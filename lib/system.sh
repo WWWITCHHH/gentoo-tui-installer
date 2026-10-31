@@ -94,16 +94,22 @@ system_write_fstab() {
 }
 
 system_root_password() {
-    local password
-    ui_password_twice "$(T 'Root password')" || return 1
-    password=$UI_SECRET
+    local password=${GI_ROOT_PASSWORD:-}
+    if [[ -z $password ]]; then
+        ui_password_twice "$(T 'Root password')" || return 1
+        password=$UI_SECRET
+    fi
     if ! ui_run_input "$(T 'Setting the root password')" "root:${password}" \
         env LC_ALL=C LANG=C chroot "$GI_ROOT" /usr/bin/chpasswd; then
-        unset password UI_SECRET
+        unset password
+        GI_ROOT_PASSWORD=""
+        UI_SECRET=""
         UI_RESULT=""
         return 1
     fi
-    unset password UI_SECRET
+    unset password
+    GI_ROOT_PASSWORD=""
+    UI_SECRET=""
     UI_RESULT=""
     log_info "root password set"
 }
@@ -126,15 +132,23 @@ system_create_user() {
         [[ -n $group_list ]] && chroot_run "$(T 'Adding %s to groups' "$CFG_USERNAME")" \
             usermod -aG "$group_list" "$CFG_USERNAME" || true
     fi
-    ui_password_twice "$(T 'Password for user %s' "$CFG_USERNAME")" || return 1
-    password=$UI_SECRET
+    if [[ -z ${GI_USER_PASSWORD:-} ]]; then
+        ui_password_twice "$(T 'Password for user %s' "$CFG_USERNAME")" || return 1
+        password=$UI_SECRET
+    else
+        password=$GI_USER_PASSWORD
+    fi
     if ! ui_run_input "$(T 'Setting the password for %s' "$CFG_USERNAME")" \
         "${CFG_USERNAME}:${password}" env LC_ALL=C LANG=C chroot "$GI_ROOT" /usr/bin/chpasswd; then
-        unset password UI_SECRET
+        unset password
+        GI_USER_PASSWORD=""
+        UI_SECRET=""
         UI_RESULT=""
         return 1
     fi
-    unset password UI_SECRET
+    unset password
+    GI_USER_PASSWORD=""
+    UI_SECRET=""
     UI_RESULT=""
     groups=$(chroot_capture id -nG "$CFG_USERNAME" | tr -s '[:space:]' ' ')
     log_info "user created: $CFG_USERNAME (groups: ${groups:-none})"

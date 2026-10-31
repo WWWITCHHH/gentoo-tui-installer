@@ -88,4 +88,44 @@ assert_not_contains "$config_text" "top-secret-password" "config save never writ
 assert_not_contains "$config_text" "PASSWORD" "config save never writes a password key"
 assert_contains "$config_text" 'UI_LANGUAGE="en"' "config save persists the UI language"
 
+# ---------------------------------------------------------------------------
+# Explicit kernel and account choices
+# ---------------------------------------------------------------------------
+config_defaults
+assert_eq "" "$CFG_KERNEL_MODE" "the kernel method has no implicit default"
+assert_eq "no" "$CFG_CREATE_USER" "no account is created by default"
+assert_eq "" "$CFG_USERNAME" "no user name is invented by default"
+
+assert_fail "kernel validation rejects an unset method" wizard_kernel_validate
+assert_eq "Choose the binary or compiled kernel explicitly." "$UI_PAGE_MESSAGE"
+CFG_KERNEL_MODE=bin
+assert_ok "kernel validation accepts binary" wizard_kernel_validate
+CFG_KERNEL_MODE=dist
+assert_ok "kernel validation accepts compiled" wizard_kernel_validate
+
+config_defaults
+STATE_DONE=()
+GI_ROOT_PASSWORD=""
+assert_fail "users page requires the root password" wizard_users_validate
+assert_eq "Set the root password before continuing." "$UI_PAGE_MESSAGE"
+GI_ROOT_PASSWORD="memory-only"
+assert_ok "users page accepts a root password" wizard_users_validate
+CFG_CREATE_USER=yes
+CFG_USERNAME="Not Valid"
+assert_fail "users page validates the user name" wizard_users_validate
+
+# The review text reports only whether a password is set.
+config_defaults
+CFG_CREATE_USER=yes
+CFG_USERNAME=alice
+GI_ROOT_PASSWORD="hunter2-secret"
+GI_USER_PASSWORD="correct-horse"
+review=$(wizard_review_text)
+assert_contains "$review" "root password: set" "review reports the root password state"
+assert_not_contains "$review" "hunter2-secret" "review never prints the root password"
+assert_not_contains "$review" "correct-horse" "review never prints the user password"
+GI_ROOT_PASSWORD=""
+assert_contains "$(wizard_review_text)" "root password: not set" \
+    "review reports a missing root password"
+
 finish_tests
