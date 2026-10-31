@@ -128,4 +128,48 @@ GI_ROOT_PASSWORD=""
 assert_contains "$(wizard_review_text)" "root password: not set" \
     "review reports a missing root password"
 
+# sudo is configured once, on the users page.
+config_defaults
+wizard_desktop_rows
+desktop_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_not_contains "$desktop_rows" "VIDEO_CARDS" "video row is hidden without a desktop"
+CFG_DESKTOP=xfce
+wizard_desktop_rows
+desktop_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$desktop_rows" "VIDEO_CARDS" "video row appears with a desktop"
+
+wizard_users_rows
+users_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$users_rows" "Install sudo" "users page has the sudo setting"
+wizard_services_rows
+services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_not_contains "$services_rows" "Install sudo" "services page has no duplicate sudo setting"
+assert_contains "$services_rows" "Network" "services page still lists the network"
+
+# The final confirmation must show consistency warnings and use an explicit
+# "Continue anyway" label when the configuration is suspicious.
+UI_MODAL_TITLE=""
+UI_MODAL_BODY=""
+UI_MODAL_CONFIRM=""
+ui_modal_confirm() {
+    UI_MODAL_TITLE=$1
+    UI_MODAL_BODY=$2
+    UI_MODAL_CONFIRM=$4
+    return 0
+}
+config_defaults
+state_init
+CFG_KERNEL_MODE=manual
+CFG_DESKTOP=xfce
+CFG_PROFILE=kde
+CFG_VIDEO_CARDS=intel
+CFG_CREATE_USER=yes
+CFG_USERNAME=alice
+assert_ok "review confirmation opens with warnings" wizard_confirm_installation
+assert_contains "$UI_MODAL_BODY" "Configuration warnings" \
+    "review confirmation includes the warnings heading"
+assert_contains "$UI_MODAL_BODY" "KDE" "review confirmation includes the profile warning"
+assert_eq "Continue anyway" "$UI_MODAL_CONFIRM" \
+    "warnings require an explicit continue label"
+
 finish_tests

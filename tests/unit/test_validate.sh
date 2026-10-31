@@ -70,4 +70,44 @@ assert_fail "validation message set" validate_hostname "bad host"
 [[ -n $VALIDATION_MESSAGE ]] || { printf '  FAIL: validation message not set\n'; TESTS_FAILED=$((TESTS_FAILED + 1)); }
 TESTS_RUN=$((TESTS_RUN + 1))
 
+# Non-fatal configuration contradictions.
+config_defaults
+CFG_KERNEL_MODE=bin
+CFG_DESKTOP=xfce
+CFG_PROFILE=desktop
+CFG_VIDEO_CARDS=intel
+CFG_CREATE_USER=yes
+CFG_USERNAME=alice
+CFG_NETWORK=dhcpcd
+CFG_SSH=no
+assert_fail "a consistent configuration has no warnings" config_check_consistency
+assert_eq "0" "${#CONFIG_WARNINGS[@]}" "no warnings collected"
+
+CFG_PROFILE=kde
+assert_ok "KDE profile with XFCE warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "KDE" "KDE profile warning present"
+
+CFG_PROFILE=desktop
+CFG_DESKTOP=none
+assert_ok "desktop profile without a desktop warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "no desktop environment" "missing desktop warning present"
+
+CFG_DESKTOP=xfce
+CFG_PROFILE=desktop
+CFG_VIDEO_CARDS=""
+assert_ok "desktop without VIDEO_CARDS warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "No VIDEO_CARDS" "missing VIDEO_CARDS warning present"
+
+CFG_VIDEO_CARDS=intel
+CFG_NETWORK=none
+CFG_SSH=yes
+assert_ok "SSH without network warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "SSH" "SSH/network warning present"
+
+CFG_NETWORK=dhcpcd
+CFG_SSH=no
+CFG_KERNEL_MODE=manual
+assert_ok "manual kernel warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "Manual kernel" "manual kernel warning present"
+
 finish_tests

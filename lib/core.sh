@@ -163,6 +163,50 @@ human_mib() {
     fi
 }
 
+# Best-effort detection of the primary GPU. The result is a valid VIDEO_CARDS
+# value for the packages that use the VIDEO_CARDS USE_EXPAND. An empty result
+# means "use the Xorg modesetting driver".
+hardware_detect_video_cards() {
+    local root=${GI_DRM_CLASS_DIR:-/sys/class/drm}
+    local card vendor device line
+    for card in "$root"/card[0-9]*; do
+        [[ -r $card/device/vendor ]] || continue
+        vendor=$(<"$card/device/vendor")
+        device=""
+        [[ -r $card/device/device ]] && device=$(<"$card/device/device")
+        vendor=${vendor,,}
+        device=${device,,}
+        case "$vendor" in
+            0x15ad) printf 'vmware'; return 0 ;;
+            0x1234) printf 'qxl'; return 0 ;;
+            0x1af4)
+                if [[ $device == 0x1050 ]]; then
+                    printf 'virgl'
+                    return 0
+                fi
+                ;;
+            0x8086) printf 'intel'; return 0 ;;
+            0x1002) printf 'amdgpu radeonsi'; return 0 ;;
+            0x10de) printf 'nouveau'; return 0 ;;
+            0x80ee) return 0 ;;
+        esac
+    done
+    if command -v lspci >/dev/null 2>&1; then
+        line=$(lspci -nn 2>/dev/null | grep -Ei 'vga|3d|display' | head -n 1 || true)
+        case "$line" in
+            *'[15ad:'*) printf 'vmware' ;;
+            *'[1234:'*) printf 'qxl' ;;
+            *'[1af4:'*) printf 'virgl' ;;
+            *'[8086:'*) printf 'intel' ;;
+            *'[1002:'*) printf 'amdgpu radeonsi' ;;
+            *'[10de:'*) printf 'nouveau' ;;
+            *) printf '' ;;
+        esac
+        return 0
+    fi
+    printf ''
+}
+
 # Quotes a value for safe inclusion in a shell configuration file.
 shell_quote() {
     local value=$1
@@ -460,10 +504,14 @@ state_reset() {
 }
 
 config_derived() {
-    if [[ $CFG_STAGE_FLAVOR == *systemd* ]]; then
-        CFG_INIT=systemd
-    else
-        CFG_INIT=openrc
+    local init=openrc
+    [[ $CFG_STAGE_FLAVOR == *systemd* ]] && init=systemd
+    CFG_INIT=$init
+    # A graphical installation should use the matching desktop Stage3. This
+    # keeps the init system choice and the desktop choice from contradicting
+    # each other, even if the user changes the desktop later.
+    if [[ ${CFG_DESKTOP:-none} != none ]]; then
+        CFG_STAGE_FLAVOR="desktop-${init}"
     fi
     # Desktop stage3 variants use the desktop profile unless the user selected
     # a more specific one (GNOME, KDE or hardened).

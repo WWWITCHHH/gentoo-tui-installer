@@ -2,6 +2,7 @@
 # Input and configuration validators.
 
 VALIDATION_MESSAGE=""
+CONFIG_WARNINGS=()
 
 fail_validation() {
     VALIDATION_MESSAGE=$*
@@ -373,4 +374,50 @@ config_validate() {
     fi
 
     ((${#VALIDATION_ERRORS[@]} == 0))
+}
+
+# Non-fatal configuration checks. These combinations are valid enough to start
+# the installer, but they are likely to surprise the user or require manual
+# follow-up, so the review page shows them in an explicit warning before the
+# final confirmation. Returns 0 when at least one warning was collected.
+config_check_consistency() {
+    CONFIG_WARNINGS=()
+
+    if [[ $CFG_DESKTOP == none ]]; then
+        case "$CFG_PROFILE" in
+            desktop|gnome|kde)
+                CONFIG_WARNINGS+=("$(T 'A desktop Portage profile is selected, but no desktop environment is configured.')")
+                ;;
+        esac
+    else
+        case "$CFG_PROFILE" in
+            gnome)
+                if [[ $CFG_DESKTOP != gnome ]]; then
+                    CONFIG_WARNINGS+=("$(T 'The GNOME Portage profile is selected, but the desktop environment is %s.' "$CFG_DESKTOP")")
+                fi
+                ;;
+            kde)
+                CONFIG_WARNINGS+=("$(T 'The KDE Portage profile is selected, but this installer only configures XFCE or GNOME.')")
+                ;;
+            hardened)
+                CONFIG_WARNINGS+=("$(T 'The hardened profile with a desktop environment may need manual USE adjustments.')")
+                ;;
+        esac
+        if [[ -z $CFG_VIDEO_CARDS ]]; then
+            CONFIG_WARNINGS+=("$(T 'No VIDEO_CARDS are set; Xorg may run without acceleration.')")
+        fi
+        if [[ $CFG_CREATE_USER != yes ]]; then
+            CONFIG_WARNINGS+=("$(T 'A desktop environment is selected, but no regular user is created; you will log in as root.')")
+        fi
+    fi
+
+    if [[ $CFG_NETWORK == none && $CFG_SSH == yes ]]; then
+        CONFIG_WARNINGS+=("$(T 'SSH is enabled, but network configuration is set to none.')")
+    fi
+
+    if [[ $CFG_KERNEL_MODE == manual ]]; then
+        CONFIG_WARNINGS+=("$(T 'Manual kernel configuration remains interactive and requires the correct storage, filesystem and graphics drivers. Choose a binary kernel if unsure.')")
+    fi
+
+    ((${#CONFIG_WARNINGS[@]}))
 }

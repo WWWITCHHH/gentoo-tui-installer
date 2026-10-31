@@ -369,19 +369,25 @@ wizard_page_system() {
 # Stage3 and build page -----------------------------------------------------
 
 wizard_build_rows() {
-    local jobs
+    local jobs flavor
     jobs=$CFG_MAKE_JOBS
     [[ $CFG_MAKE_JOBS == auto ]] && jobs="$(T 'Automatic') ($(make_jobs_suggestion))"
+    case "$CFG_STAGE_FLAVOR" in
+        desktop-openrc) flavor="OpenRC ($(T 'desktop Stage3'))" ;;
+        desktop-systemd) flavor="systemd ($(T 'desktop Stage3'))" ;;
+        openrc) flavor="OpenRC" ;;
+        systemd) flavor="systemd" ;;
+        *) flavor=$CFG_STAGE_FLAVOR ;;
+    esac
     UI_PAGE_ROWS=(
-        "flavor|$(T 'Stage3 variant')|$CFG_STAGE_FLAVOR|$(T 'openrc/systemd and desktop variants')"
+        "flavor|$(T 'Init system and Stage3')|$flavor|$(T 'OpenRC or systemd; the desktop Stage3 follows the desktop choice automatically')"
         "mirror|$(T 'Mirror')|$CFG_MIRROR|$(T 'Base distfiles.gentoo.org URL')"
         "stageurl|$(T 'Direct Stage3 URL')|${CFG_STAGE_URL:-$(T 'automatic')}|$(T 'Empty - use latest-stage3')"
-        "profile|$(T 'Portage profile')|$CFG_PROFILE|$(T 'stage, desktop, gnome, kde or hardened')"
+        "profile|$(T 'Portage profile (derived)')|$CFG_PROFILE|$(T 'Usually derived from the init system and desktop; change only if needed')"
         "cpu|$(T 'CPU_FLAGS_X86')|$(wizard_bool_text "$CFG_CPU_FLAGS")|$(T 'Detect with cpuid2cpuflags')"
         "world|$(T 'Update @world')|$(wizard_bool_text "$CFG_UPDATE_WORLD")|$(T 'Can take a long time')"
         "jobs|$(T 'MAKEOPTS')|$jobs|$(T 'Number of parallel build jobs')"
         "cflags|CFLAGS|$CFG_CFLAGS|$(T 'Compiler flags')"
-        "video|VIDEO_CARDS|${CFG_VIDEO_CARDS:-$(T 'not set')}|$(T 'GPU drivers for Portage')"
         "use|$(T 'Extra USE')|${CFG_USE_EXTRA:-$(T 'none')}|$(T 'Additional USE flags')"
     )
 }
@@ -390,12 +396,11 @@ wizard_build_edit() {
     local tag=$1 choice value
     case "$tag" in
         flavor)
-            wizard_pick CFG_STAGE_FLAVOR "$(T 'Stage3 variant')" \
-                "$(T 'Choose the init system and software set')" "$CFG_STAGE_FLAVOR" \
-                "openrc|OpenRC|$(T 'Classic Gentoo, minimal Stage3')" \
-                "systemd|systemd|$(T 'Stage3 with systemd')" \
-                "desktop-openrc|Desktop OpenRC|$(T 'Stage3 with graphical libraries')" \
-                "desktop-systemd|Desktop systemd|$(T 'Stage3 with graphics and systemd')" || true
+            wizard_pick CFG_STAGE_FLAVOR "$(T 'Init system and Stage3')" \
+                "$(T 'Choose OpenRC or systemd. A desktop Stage3 is selected automatically when a desktop environment is chosen.')" \
+                "${CFG_STAGE_FLAVOR#desktop-}" \
+                "openrc|OpenRC|$(T 'Classic Gentoo init system')" \
+                "systemd|systemd|$(T 'systemd init system')" || true
             ;;
         mirror)
             wizard_prompt CFG_MIRROR "$(T 'distfiles mirror')" "$(T 'Mirror base URL:')" \
@@ -442,11 +447,6 @@ wizard_build_edit() {
             wizard_prompt CFG_CFLAGS CFLAGS "$(T 'Compiler flags:')" validate_cflags \
                 "$(T 'Usually: -march=native -O2 -pipe')" || true
             ;;
-        video)
-            wizard_prompt CFG_VIDEO_CARDS VIDEO_CARDS \
-                "$(T 'Video drivers (space-separated, may be empty):')" validate_optional_tokens \
-                "$(T 'For example: amdgpu radeonsi or intel')" || true
-            ;;
         use)
             wizard_prompt CFG_USE_EXTRA "$(T 'USE flags')" \
                 "$(T 'Additional USE flags (space-separated):')" validate_use_flags \
@@ -476,10 +476,6 @@ wizard_build_validate() {
         UI_PAGE_MESSAGE=$VALIDATION_MESSAGE
         return 1
     }
-    validate_optional_tokens "$CFG_VIDEO_CARDS" 2>/dev/null || {
-        UI_PAGE_MESSAGE=$VALIDATION_MESSAGE
-        return 1
-    }
     if [[ $CFG_MAKE_JOBS != auto ]]; then
         validate_int_range "$CFG_MAKE_JOBS" 1 256 2>/dev/null || {
             UI_PAGE_MESSAGE=$VALIDATION_MESSAGE
@@ -491,7 +487,7 @@ wizard_build_validate() {
 
 wizard_page_build() {
     ui_page_run "$(T 'Stage3 and build options')" \
-        "$(T 'Stage3 source, Portage profile and package build settings')" \
+        "$(T 'Choose OpenRC or systemd, then the Stage3 source and package build settings')" \
         wizard_build_rows wizard_build_edit wizard_build_validate
 }
 
@@ -681,7 +677,6 @@ wizard_services_rows() {
     UI_PAGE_ROWS=(
         "network|$(T 'Network')|$CFG_NETWORK|$(T 'dhcpcd, NetworkManager or no configuration')"
         "optional|$(T 'Optional services')|$optional|$(T 'Space toggles SSH, cron, chrony and syslog')"
-        "sudo|$(T 'Install sudo')|$(wizard_bool_text "$CFG_SUDO")|$(T 'Rule for the wheel group')"
     )
 }
 
@@ -719,10 +714,6 @@ wizard_services_edit() {
                 wizard_save
             fi
             ;;
-        sudo)
-            wizard_pick_bool CFG_SUDO "$(T 'sudo')" \
-                "$(T 'Install sudo and allow the wheel group?')" || true
-            ;;
     esac
 }
 
@@ -737,12 +728,16 @@ wizard_page_services() {
 wizard_desktop_rows() {
     UI_PAGE_ROWS=(
         "desktop|$(T 'Desktop environment')|$(desktop_label)|$(T 'XFCE, GNOME or a console-only system')"
-        "video|VIDEO_CARDS|${CFG_VIDEO_CARDS:-$(T 'not set')}|$(T 'Required for GPU acceleration in a desktop')"
     )
+    if desktop_is_enabled; then
+        UI_PAGE_ROWS+=(
+            "video|VIDEO_CARDS|${CFG_VIDEO_CARDS:-$(T 'not set')}|$(T 'Detected automatically; Enter to choose')"
+        )
+    fi
 }
 
 wizard_desktop_edit() {
-    local tag=$1 old_profile=$CFG_PROFILE
+    local tag=$1 old_profile=$CFG_PROFILE detected current
     case "$tag" in
         desktop)
             if wizard_pick CFG_DESKTOP "$(T 'Desktop environment')" \
@@ -757,9 +752,46 @@ wizard_desktop_edit() {
             fi
             ;;
         video)
-            wizard_prompt CFG_VIDEO_CARDS VIDEO_CARDS \
-                "$(T 'Video drivers (space-separated, may be empty):')" validate_optional_tokens \
-                "$(T 'For example: amdgpu radeonsi or intel')" || true
+            detected=$(hardware_detect_video_cards)
+            case "$CFG_VIDEO_CARDS" in
+                ""|intel|"amdgpu radeonsi"|nouveau|nvidia|vmware|qxl|virgl)
+                    current=$CFG_VIDEO_CARDS
+                    ;;
+                *) current=custom ;;
+            esac
+            [[ -n $current ]] || current=none
+            if ui_choice single "$(T 'VIDEO_CARDS')" \
+                "$(T 'Choose the GPU drivers used by Portage. Automatic detection is recommended.')" "$current" \
+                "auto|$(T 'Detect automatically')|$(T 'Detected: %s' "${detected:-$(T 'not detected')}")" \
+                "intel|Intel|$(T 'Integrated Intel graphics')" \
+                "amdgpu radeonsi|AMD|$(T 'Modern AMD GPUs (amdgpu + radeonsi)')" \
+                "nouveau|NVIDIA (open)|$(T 'Open-source NVIDIA driver')" \
+                "nvidia|NVIDIA (proprietary)|$(T 'Proprietary nvidia-drivers')" \
+                "vmware|VMware|$(T 'VMware SVGA (vmwgfx)')" \
+                "qxl|QEMU QXL|$(T 'QEMU virtual display')" \
+                "virgl|Virtio GPU|$(T 'virtio-gpu with virgl')" \
+                "none|$(T 'No acceleration')|$(T 'Use the Xorg modesetting driver')" \
+                "custom|$(T 'Custom value')|$(T 'Enter VIDEO_CARDS manually')"; then
+                case "$UI_RESULT" in
+                    auto)
+                        if [[ -n $detected ]]; then
+                            CFG_VIDEO_CARDS=$detected
+                        else
+                            CFG_VIDEO_CARDS=""
+                            ui_msg "$(T 'No GPU detected')" \
+                                "$(T 'No supported GPU was detected; Xorg will use the modesetting driver.')" || true
+                        fi
+                        ;;
+                    none) CFG_VIDEO_CARDS="" ;;
+                    custom)
+                        wizard_prompt CFG_VIDEO_CARDS VIDEO_CARDS \
+                            "$(T 'Video drivers (space-separated, may be empty):')" validate_optional_tokens \
+                            "$(T 'For example: amdgpu radeonsi or intel')" || true
+                        ;;
+                    *) CFG_VIDEO_CARDS=$UI_RESULT ;;
+                esac
+                wizard_save
+            fi
             ;;
     esac
 }
@@ -823,8 +855,37 @@ wizard_review_edit() {
     esac
 }
 
+wizard_confirm_installation() {
+    local summary login body warning_block="" confirm_label warning
+    config_derived
+    login=$(T 'root only')
+    [[ $CFG_CREATE_USER == yes ]] && login=$CFG_USERNAME
+    summary=$(T 'Boot: %s · Disk: %s · Kernel: %s · Desktop: %s · User: %s' \
+        "${CFG_BOOT_MODE^^}" "${CFG_DISK:-$(T 'not selected')}" \
+        "${CFG_KERNEL_MODE:-$(T 'not selected')}" "$(desktop_label)" "$login")
+    config_check_consistency || true
+    if ((${#CONFIG_WARNINGS[@]})); then
+        warning_block="$(T 'Configuration warnings:')"$'\n'
+        for warning in "${CONFIG_WARNINGS[@]}"; do
+            warning_block+="• ${warning}"$'\n'
+        done
+        warning_block+=$'\n'
+        confirm_label=$(T 'Continue anyway')
+    else
+        confirm_label=$(T 'Confirm')
+    fi
+    body="$summary"$'\n\n'
+    [[ -n $warning_block ]] && body+="$warning_block"
+    if state_is_done disk; then
+        body+="$(T 'All settings have been collected. The installation will continue without further questions.')"
+    else
+        body+="$(T 'All settings have been collected. The disk %s will be wiped and formatted, then the installation will run without further questions.\n\nThis cannot be undone.' "${CFG_DISK:-$(T 'not selected')}")"
+    fi
+    ui_modal_confirm "$(T 'Start the installation?')" "$body" no "$confirm_label" "$(T 'Cancel')"
+}
+
 wizard_review_validate() {
-    local error errors="" body summary login
+    local error errors=""
     UI_PAGE_MESSAGE=""
     config_derived
     if ! config_validate; then
@@ -838,17 +899,7 @@ wizard_review_validate() {
         UI_PAGE_MESSAGE=$(T 'Passwords are required to finish the installation.')
         return 1
     fi
-    login=$(T 'root only')
-    [[ $CFG_CREATE_USER == yes ]] && login=$CFG_USERNAME
-    summary=$(T 'Boot: %s · Disk: %s · Kernel: %s · Desktop: %s · User: %s' \
-        "${CFG_BOOT_MODE^^}" "${CFG_DISK:-$(T 'not selected')}" \
-        "${CFG_KERNEL_MODE:-$(T 'not selected')}" "$(desktop_label)" "$login")
-    if state_is_done disk; then
-        body="$summary"$'\n\n'"$(T 'All settings have been collected. The installation will continue without further questions.')"
-    else
-        body="$summary"$'\n\n'"$(T 'All settings have been collected. The disk %s will be wiped and formatted, then the installation will run without further questions.\n\nThis cannot be undone.' "${CFG_DISK:-$(T 'not selected')}")"
-    fi
-    if ! ui_modal_confirm "$(T 'Start the installation?')" "$body" no; then
+    if ! wizard_confirm_installation; then
         UI_PAGE_MESSAGE=$(T 'Installation was not started.')
         return 1
     fi

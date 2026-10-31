@@ -62,6 +62,50 @@ CFG_PROFILE=gnome
 config_derived
 assert_eq "gnome" "$CFG_PROFILE" "no desktop keeps an explicit GNOME profile"
 
+# A graphical install upgrades the base Stage3 to the matching desktop Stage3.
+CFG_DESKTOP=xfce
+CFG_STAGE_FLAVOR=openrc
+CFG_PROFILE=stage
+config_derived
+assert_eq "desktop-openrc" "$CFG_STAGE_FLAVOR" "XFCE upgrades OpenRC to the desktop Stage3"
+assert_eq "openrc" "$CFG_INIT" "desktop Stage3 keeps the selected init system"
+assert_eq "desktop" "$CFG_PROFILE" "XFCE selects the desktop profile"
+CFG_STAGE_FLAVOR=systemd
+config_derived
+assert_eq "desktop-systemd" "$CFG_STAGE_FLAVOR" "XFCE upgrades systemd to the desktop Stage3"
+assert_eq "systemd" "$CFG_INIT" "desktop systemd keeps systemd"
+
+# An explicitly selected desktop Stage3 is not downgraded when no desktop is used.
+CFG_DESKTOP=none
+CFG_STAGE_FLAVOR=desktop-openrc
+CFG_PROFILE=stage
+config_derived
+assert_eq "desktop-openrc" "$CFG_STAGE_FLAVOR" "desktop Stage3 is preserved without a desktop"
+assert_eq "desktop" "$CFG_PROFILE" "desktop Stage3 still selects the desktop profile"
+
+# GPU detection maps the common PCI vendors to VIDEO_CARDS values.
+drm_root=$(mktemp -d "${TMPDIR:-/tmp}/gi-drm.XXXXXX")
+make_drm_card() {
+    local vendor=$1 device=$2
+    rm -rf -- "$drm_root/card0"
+    mkdir -p "$drm_root/card0/device"
+    printf '%s\n' "$vendor" >"$drm_root/card0/device/vendor"
+    printf '%s\n' "$device" >"$drm_root/card0/device/device"
+}
+make_drm_card 0x8086 0x1234
+assert_eq "intel" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "Intel GPU"
+make_drm_card 0x1002 0x73ff
+assert_eq "amdgpu radeonsi" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "AMD GPU"
+make_drm_card 0x10de 0x1f02
+assert_eq "nouveau" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "NVIDIA GPU"
+make_drm_card 0x15ad 0x0405
+assert_eq "vmware" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "VMware GPU"
+make_drm_card 0x1234 0x1111
+assert_eq "qxl" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "QEMU QXL GPU"
+make_drm_card 0x1af4 0x1050
+assert_eq "virgl" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "virtio GPU"
+rm -rf -- "$drm_root"
+
 expected_steps=(disk stage3 portage kernel system tools bootloader desktop finalize)
 assert_eq "${expected_steps[*]}" "${STATE_STEPS[*]}" "state step order includes desktop"
 assert_eq "$GI_STEP_TOTAL" "${#STATE_STEPS[@]}" "step total matches state steps"

@@ -197,16 +197,6 @@ main_start_installation() {
         GI_MANUAL_OPTIONS_READY=1
     fi
 
-    # A resumed installation that has not partitioned the disk yet still needs
-    # one explicit destructive confirmation. The review page already asked for
-    # it in the normal settings-first flow.
-    if ! state_is_done disk && ((!GI_ASSUME_YES)) && ((!confirmed)); then
-        if ! ui_modal_confirm "$(T 'Wipe the target disk?')" \
-            "$(T 'The disk %s will be repartitioned and formatted. All data on it will be destroyed permanently.' "${CFG_DISK:-$(T 'not selected')}")" no; then
-            return 1
-        fi
-    fi
-
     config_derived
     if ! config_validate; then
         main_show_validation_errors
@@ -214,9 +204,18 @@ main_start_installation() {
     fi
     config_save
 
+    if ((GI_ASSUME_YES)); then
+        # --yes skips the interactive warning, but the warnings still belong in
+        # the log for post-install troubleshooting.
+        config_check_consistency || true
+        local warning
+        for warning in "${CONFIG_WARNINGS[@]}"; do
+            log_warn "configuration: $warning"
+        done
+    fi
+
     if ((!GI_ASSUME_YES)) && ((!confirmed)); then
-        if ! ui_modal_confirm "$(T 'Start the installation?')" \
-            "$(T 'The installation will continue from the next unfinished step without further questions.')" no; then
+        if ! wizard_confirm_installation; then
             return 1
         fi
     fi
@@ -308,6 +307,13 @@ main() {
     esac
     i18n_init "$CFG_UI_LANGUAGE"
     config_derived
+    # A new installation gets a sensible VIDEO_CARDS default from the GPU that
+    # is visible to the live environment. A loaded configuration keeps its
+    # explicit value (including an empty one).
+    if ((!config_existed)) && [[ -z $CFG_VIDEO_CARDS ]]; then
+        CFG_VIDEO_CARDS=$(hardware_detect_video_cards)
+        [[ -n $CFG_VIDEO_CARDS ]] && log_info "detected VIDEO_CARDS: $CFG_VIDEO_CARDS"
+    fi
     state_load
 
     log_info "config file: $GI_CONFIG_FILE"

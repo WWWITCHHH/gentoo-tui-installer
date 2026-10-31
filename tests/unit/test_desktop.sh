@@ -161,4 +161,9 @@ PREFLIGHT_WARNED=0
 preflight_network
 assert_contains "${PREFLIGHT_LINES[0]}" "warn|" "network not needed after desktop completed"
 
+# A console-only installation must not run the desktop package step.
+CFG_DESKTOP=none
+desktop_install_packages() { return 99; }
+assert_ok "desktop step is a no-op without a desktop" step_desktop
+
 finish_tests
