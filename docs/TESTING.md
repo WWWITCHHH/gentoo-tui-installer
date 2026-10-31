@@ -19,13 +19,13 @@ make lint      # только ShellCheck
 | `tests/unit/test_validate.sh` | hostname, username, timezone, locale, URL, MiB, диапазоны, USE, CFLAGS, kernel cmdline, bool. |
 | `tests/unit/test_disks.sh` | UEFI/BIOS-планы, swap и `/home`, отсутствие перекрытий, минимальный размер, BIOS > 2 TiB, NVMe-имена, `parted`-типы ФС, fallback-определение размера virtio-диска через `blockdev`/`lsblk`/sysfs. |
 | `tests/unit/test_kernel.sh` | удаление `root=`, `/etc/kernel/cmdline`, dracut config, `/etc/default/grub`, quoting одинарных кавычек. |
-| `tests/unit/test_ui.sh` | progress bar, перенос текста, валидатор целых чисел, панель действий, сводка, декодирование стрелок/F1/F2/F10/Ctrl-S. |
-| `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля, сводка на английском и русском, отсутствие паролей в `install.conf`. |
+| `tests/unit/test_ui.sh` | progress bar, перенос текста, валидатор целых чисел, панель действий `<Back>`/`<Next>`/`<Save>`/`<Help>`/`<Exit>`, сводка, декодирование стрелок/F1/F2/F10/Ctrl-S, маркеры `[ ]`/`[*]`/`( )`/`(*)`, окна выбора, модальное подтверждение, `ui_page_run` и отсутствие ожидания в unattended-режиме. |
+| `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля, сводка на английском и русском, отсутствие паролей в `install.conf`, пустой `KERNEL_MODE` по умолчанию, явный выбор ядра, требования к паролям и отсутствие секретов в тексте проверки. |
 | `tests/unit/test_i18n.sh` | структура `ru.tsv`, перевод статических и printf-строк, сохранение подстановок, выбор/generation locale, первый выбор языка, панель действий и сводка. |
 | `tests/unit/test_desktop.sh` | списки пакетов XFCE/GNOME, LightDM/GDM, OpenRC-службы и `/etc/conf.d/display-manager`, systemd-цель, группы пользователя, проверка установки, сетевое требование для незавершённого desktop-этапа. |
 | `tests/unit/test_config_example.sh` | все ключи `CONFIG_KEYS` присутствуют, нет дубликатов и паролей, пример загружается и даёт ожидаемые значения. |
 
-На момент 1.2.0 выполняется 355 assertions в 9 файлах. Число может меняться;
+На момент 1.3.0 выполняется 404 assertions в 9 файлах. Число может меняться;
 важен нулевой код возврата, а не точное количество.
 
 ### Harness
@@ -82,7 +82,7 @@ sudo apt-get install shellcheck
 
 ## Ручная проверка в виртуальной машине
 
-В версии 1.2.0 **нет автоматического интеграционного теста с реальной
+В версии 1.3.0 **нет автоматического интеграционного теста с реальной
 разметкой и загрузкой**. Перед использованием на физическом компьютере
 обязательно пройдите сценарий в VM.
 
