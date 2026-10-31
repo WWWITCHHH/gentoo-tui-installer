@@ -32,6 +32,9 @@ i18n_init en
 assert_eq "English" "$(i18n_language_label en)" "English label"
 assert_eq "Main menu" "$(T 'Main menu')" "English is the source language"
 assert_eq "Yes" "$(i18n_text 'Yes')" "English mode ignores the Russian catalogue"
+assert_eq $'line 1\nline 2' "$(T 'line 1\nline 2')" \
+    "English expands \\n escapes without arguments"
+assert_eq '100%' "$(T '100%')" "English keeps percent signs literal"
 
 i18n_init ru
 assert_eq "Русский" "$(i18n_language_label ru)" "Russian label"
@@ -79,7 +82,8 @@ assert_eq "de_DE.UTF-8" "$CFG_LOCALE" "explicit target locale is preserved"
 i18n_init en
 UI_MENU_SUMMARY=("Boot: UEFI · Disk: /dev/vda · FS: xfs")
 bar=$(ui_action_bar)
-assert_contains "$bar" "<Select>" "action bar has Select"
+assert_contains "$bar" "<Back>" "action bar has Back"
+assert_contains "$bar" "<Next>" "action bar has Next"
 assert_contains "$bar" "<Exit>" "action bar has Exit"
 assert_contains "$bar" "<Save>" "action bar has Save"
 assert_contains "$bar" "<Help>" "action bar has Help"
@@ -93,7 +97,7 @@ assert_contains "$summary" "Boot: UEFI" "summary shows current settings"
 # Action labels stay in the screenshot style in both languages.
 i18n_init ru
 bar=$(ui_action_bar)
-for label in '<Select>' '<Exit>' '<Save>' '<Help>'; do
+for label in '<Back>' '<Next>' '<Exit>' '<Save>' '<Help>'; do
     assert_contains "$bar" "$label" "Russian action bar has ${label}"
 done
 i18n_init en
