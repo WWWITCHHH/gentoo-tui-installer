@@ -209,6 +209,14 @@ disk_plan_print() {
     printf '%s\n' "$(T 'Changes will destroy ALL data on %s.' "$CFG_DISK")"
 }
 
+disk_plan_summary() {
+    local i out=""
+    for ((i = 0; i < PLAN_COUNT; i++)); do
+        out+="${out:+ · }${PLAN_LABEL[$i]} $(human_mib "${PLAN_SIZE[$i]}")"
+    done
+    printf '%s' "$out"
+}
+
 disk_plan_markdown() {
     local i path
     printf '## %s\n\n' "$(T 'Partition plan')"
@@ -283,24 +291,16 @@ disks_check_target() {
     return 0
 }
 
-disks_validate_erase() {
-    [[ $1 == ERASE ]] && return 0
-    VALIDATION_MESSAGE="$(T 'Type ERASE in uppercase to confirm.')"
-    return 1
-}
-
 disks_confirm_destruction() {
     local plan
-    if ((GI_ASSUME_YES)); then
-        log_warn "destructive confirmation skipped (--yes)"
+    if ((GI_ASSUME_YES || GI_UNATTENDED || GI_INSTALL_CONFIRMED)); then
+        log_warn "destructive confirmation already given"
         return 0
     fi
     plan=$(disk_plan_print)
-    ui_header "$(T 'Final warning')" "$(T 'Data on the disk will be destroyed permanently')"
-    ui_wrap "$plan"
-    printf '\n'
-    ui_input "$(T 'Confirmation')" "$(T 'Type ERASE to start partitioning and formatting:')" \
-        "" disks_validate_erase "$(T 'This action cannot be undone')" no
+    ui_modal_confirm "$(T 'Wipe the target disk?')" \
+        "$(T 'Data on %s will be destroyed permanently.\n\n%s\n\nThis action cannot be undone.' "${CFG_DISK:-$(T 'the selected disk')}" "$plan")" no \
+        "$(T 'Wipe disk')" "$(T 'Cancel')"
 }
 
 disk_format_fs() {
@@ -712,23 +712,26 @@ disk_partition_manual() {
         disks_manual_assign || return 1
     fi
     disks_check_target || return 1
-    disks_manual_options || return 1
+    if ((!GI_MANUAL_OPTIONS_READY && !GI_UNATTENDED)); then
+        disks_manual_options || return 1
+        GI_MANUAL_OPTIONS_READY=1
+    fi
     disks_manual_validate || return 1
 
-    ui_header "$(T 'Check the manual layout')" "$(T 'The selected partitions will be formatted')"
-    ui_wrap "root: ${CFG_PART_ROOT} (${CFG_ROOT_FS})
+    if ((!GI_UNATTENDED && !GI_INSTALL_CONFIRMED && !GI_ASSUME_YES)); then
+        ui_header "$(T 'Check the manual layout')" "$(T 'The selected partitions will be formatted')"
+        ui_wrap "root: ${CFG_PART_ROOT} (${CFG_ROOT_FS})
 ESP: ${CFG_PART_ESP:-—}
 /boot: ${CFG_PART_BOOT:-—}
 swap: ${CFG_PART_SWAP:-—}
 /home: ${CFG_PART_HOME:-—}
 
 $(T 'The changes will destroy data on the partitions being formatted.')"
-    ui_footer "$(T 'Enter - confirm · Esc - cancel')"
-    ui_read_key || return 1
-    [[ $UI_KEY != esc ]] || return 1
-    if ((!GI_ASSUME_YES)); then
-        ui_input "$(T 'Confirmation')" "$(T 'Type ERASE to format the selected partitions:')" \
-            "" disks_validate_erase "$(T 'Data on the selected partitions will be destroyed')" no || return 1
+        if ! ui_modal_confirm "$(T 'Wipe the selected partitions?')" \
+            "$(T 'The selected partitions will be formatted and their data destroyed permanently.')" no \
+            "$(T 'Format')" "$(T 'Cancel')"; then
+            return 1
+        fi
     fi
     disks_format_manual || return 1
     disks_capture_uuids || return 1
@@ -880,7 +883,6 @@ step_disk() {
         }
         ui_header "$(T 'Partition plan')" "$(T 'Check the sizes and mount points')"
         ui_wrap "$(disk_plan_print)"
-        ui_pause "$(T 'Enter - continue to confirmation')"
         disk_partition_auto || return 1
     else
         disk_partition_manual || return 1

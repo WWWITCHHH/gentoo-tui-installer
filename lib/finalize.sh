@@ -38,6 +38,8 @@ finalize_message() {
     ui_header "$(T 'Installation complete')" "$(T 'Gentoo Linux is installed on %s' "$CFG_DISK")"
     ui_wrap "$(T 'The system is configured and ready for its first boot.\n\n  Hostname:        %s\n  User:            %s\n  Bootloader:      GRUB (%s)\n  Kernel:          %s\n  Desktop:         %s\n  Timezone:        %s\n  Locale:          %s\n  Network:         %s\n\nInstallation logs: %s\nConfiguration:     %s\n\nRemove the installation media and reboot.\nChange the passwords after the first login if necessary.' \
         "$CFG_HOSTNAME" "$login" "${CFG_BOOT_MODE^^}" "$CFG_KERNEL_MODE" "$desktop" "$CFG_TIMEZONE" "$CFG_LOCALE" "$CFG_NETWORK" "$GI_LOG_DIR" "$GI_CONFIG_FILE")"
+    # This is the last screen even during an unattended run: keep it visible
+    # until the user reads the reboot instructions.
     ui_footer "$(T 'Enter - close')"
     ui_read_key || true
 }

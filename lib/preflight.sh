@@ -212,11 +212,16 @@ preflight_render() {
 
 preflight_run() {
     preflight_collect
-    if ((GI_ASSUME_YES)); then
-        if ((PREFLIGHT_FAILED)); then
-            log_error "preflight failed in assume-yes mode"
+    if ((PREFLIGHT_FAILED)); then
+        if ((GI_UNATTENDED || (GI_ASSUME_YES && !GI_INSTALL_CONFIRMED))); then
+            log_error "preflight failed before an unattended installation"
             return 1
         fi
+        # Show the report so the user can see which checks are marked red.
+        preflight_render || true
+        return 1
+    fi
+    if ((GI_ASSUME_YES || GI_UNATTENDED || GI_INSTALL_CONFIRMED)); then
         return 0
     fi
     preflight_render || return 1

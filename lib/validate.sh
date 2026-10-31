@@ -347,8 +347,10 @@ config_validate() {
         UTC|local) ;;
         *) validation_error "Hardware clock: UTC or local." ;;
     esac
-    validate_username "$CFG_USERNAME" 2>/dev/null ||
-        validation_error "$(T 'Username: %s.' "${VALIDATION_MESSAGE:-invalid}")"
+    if [[ $CFG_CREATE_USER == yes ]]; then
+        validate_username "$CFG_USERNAME" 2>/dev/null ||
+            validation_error "$(T 'Username: %s.' "${VALIDATION_MESSAGE:-invalid}")"
+    fi
     validate_cflags "$CFG_CFLAGS" 2>/dev/null ||
         validation_error "$(T 'CFLAGS: %s.' "${VALIDATION_MESSAGE:-invalid}")"
     validate_use_flags "$CFG_USE_EXTRA" 2>/dev/null ||

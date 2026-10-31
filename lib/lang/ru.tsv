@@ -779,3 +779,110 @@ Microcode: auto, none, intel or amd.	Микрокод: auto, none, intel или 
 This version supports GRUB only.	В этой версии поддерживается только GRUB.
 Unknown network configuration method.	Неизвестный способ настройки сети.
 Hardware clock: UTC or local.	Часы: UTC или local.
+Wipe the target disk?	Стереть целевой диск?
+Data on %s will be destroyed permanently.\\n\\n%s\\n\\nThis action cannot be undone.	Данные на %s будут безвозвратно уничтожены.\n\n%s\n\nЭто действие нельзя отменить.
+the selected disk	выбранный диск
+Wipe disk	Стереть диск
+Cancel	Отмена
+The installer collects all settings in grouped pages first. After one final confirmation it installs Gentoo without asking between steps:\\npartitioning -> Stage3 -> Portage -> kernel -> system -> services -> GRUB\\n-> desktop environment -> finish.	Установщик сначала собирает все настройки на сгруппированных страницах. После одного итогового подтверждения он устанавливает Gentoo, не задавая вопросов между этапами:\nразметка -> Stage3 -> Portage -> ядро -> система -> службы -> GRUB\n-> графическое окружение -> завершение.
+The disk %s will be repartitioned and formatted. All data on it will be destroyed permanently.	Диск %s будет переразмечен и отформатирован. Все данные на нём будут безвозвратно уничтожены.
+↑/↓ — move · Space — select · Enter — continue · Esc — back	↑/↓ — выбор · Пробел — отметить · Enter — продолжить · Esc — назад
+Confirm	Подтвердить
+←/→ — choose · Enter — confirm · Esc — cancel	←/→ — выбор кнопки · Enter — подтвердить · Esc — отмена
+↑/↓ — move · Enter — edit · Esc — back	↑/↓ — выбор · Enter — изменить · Esc — назад
+Arrow keys — move through items and the action bar\\nDown on the last item — go to the action bar\\nUp on the action bar — return to the items\\nLeft/Right — choose an action-bar button\\nSpace — select an item in a choice window\\nEnter — edit a field or activate a button\\nEsc — go back\\nF1 — this help\\nF2 or Ctrl-S — save the configuration\\nF10 — exit the current page\\n\\nImportant actions always require a separate confirmation.	Стрелки — перемещение по пунктам и панели действий\nВниз на последнем пункте — переход к панели действий\nВверх на панели действий — возврат к пунктам\nВлево/вправо — выбор кнопки панели действий\nПробел — отметить пункт в окне выбора\nEnter — изменить поле или нажать кнопку\nEsc — назад\nF1 — эта справка\nF2 или Ctrl-S — сохранить конфигурацию\nF10 — выйти со страницы\n\nВажные действия всегда требуют отдельного подтверждения.
+Enable this option	Включить этот параметр
+Disable this option	Отключить этот параметр
+UEFI + GPT or BIOS + MBR	UEFI + GPT или BIOS + MBR
+Automatic layout or existing partitions	Автоматическая разметка или готовые разделы
+The selected disk will be wiped	Выбранный диск будет стёрт
+Swap	Подкачка
+/home	/home
+Assign partitions	Назначить разделы
+Enter to configure	Enter — настроить
+Choose existing partitions and formatting options	Выберите готовые разделы и параметры форматирования
+Enter to inspect the layout	Enter — посмотреть разметку
+Select a target disk before continuing.	Выберите целевой диск, чтобы продолжить.
+Assign the manual partitions before continuing.	Назначьте разделы вручную, чтобы продолжить.
+All settings are collected first. The disk is changed only after the final confirmation on the review page.	Сначала собираются все настройки. Диск изменяется только после итогового подтверждения на странице проверки.
+Boot and disk	Загрузка и диск
+For example Europe/Moscow or UTC	Например, Europe/Moscow или UTC
+For example en_US.UTF-8	Например, en_US.UTF-8
+For example us or ru	Например, us или ru
+Installer language	Язык установщика
+Hostname, time, locale, console and interface language	Имя хоста, время, локаль, консоль и язык интерфейса
+Mirror	Зеркало
+stage, desktop, gnome, kde or hardened	stage, desktop, gnome, kde или hardened
+Extra USE	Дополнительные USE
+Stage3 and build options	Stage3 и параметры сборки
+Stage3 source, Portage profile and package build settings	Источник Stage3, профиль Portage и параметры сборки пакетов
+Binary (gentoo-kernel-bin)	Бинарное (gentoo-kernel-bin)
+Compiled (gentoo-kernel)	Скомпилированное (gentoo-kernel)
+Manual (gentoo-sources + menuconfig)	Ручное (gentoo-sources + menuconfig)
+Choose binary or compiled explicitly	Явно выберите бинарное или скомпилированное ядро
+Built with the Gentoo configuration	Собирается с конфигурацией Gentoo
+Manual (gentoo-sources)	Ручное (gentoo-sources)
+Configuration with menuconfig; this step remains interactive	Настройка через menuconfig; этот этап остаётся интерактивным
+Choose the binary or compiled kernel explicitly.	Явно выберите бинарное или скомпилированное ядро.
+The kernel is an explicit choice: a prebuilt binary or a kernel compiled on the target system. Manual configuration keeps menuconfig interactive.	Ядро выбирается явно: готовый бинарный пакет или сборка на целевой системе. При ручной настройке menuconfig остаётся интерактивным.
+set	задан
+Create a regular user	Создать обычного пользователя
+Do not create an account silently	Учётная запись не создаётся без запроса
+User name	Имя пользователя
+Kept in memory only, never saved to disk	Хранится только в памяти и не записывается на диск
+User password	Пароль пользователя
+Install sudo	Установить sudo
+Enter the user name:	Введите имя пользователя:
+Enable "Create a regular user" first.	Сначала включите «Создать обычного пользователя».
+Set the user name first.	Сначала задайте имя пользователя.
+Set the root password before continuing.	Задайте пароль root, чтобы продолжить.
+Set the user password before continuing.	Задайте пароль пользователя, чтобы продолжить.
+Passwords are used during the unattended installation and are kept in process memory only. They are never written to the configuration, state or logs.	Пароли используются во время автоматической установки и хранятся только в памяти процесса. Они никогда не записываются в конфигурацию, состояние или журналы.
+Users and accounts	Пользователи и учётные записи
+Network	Сеть
+Optional services	Дополнительные службы
+Space toggles SSH, cron, chrony and syslog	Пробел включает и выключает SSH, cron, chrony и syslog
+Space selects the services to install and enable	Пробел отмечает службы для установки и включения
+Remote shell access	Удалённый доступ к оболочке
+Scheduled jobs	Задания по расписанию
+Time synchronization	Синхронизация времени
+System logging	Системное журналирование
+Services	Службы
+Network, remote access, scheduled jobs, time synchronization and logging	Сеть, удалённый доступ, задания по расписанию, синхронизация времени и журналирование
+XFCE, GNOME or a console-only system	XFCE, GNOME или система без графики
+Required for GPU acceleration in a desktop	Нужны для аппаратного ускорения в графическом окружении
+Portage is already complete, so the new profile %s will not be\\napplied to the installed system.	Portage уже завершён, поэтому новый профиль %s не будет\nприменён к установленной системе.
+VIDEO_CARDS is empty: Xorg may run without acceleration. Set it or continue if a basic mode is acceptable.	VIDEO_CARDS пуст: Xorg может работать без ускорения. Задайте драйверы или продолжите, если базовый режим устраивает.
+An explicit choice: no desktop, XFCE or GNOME	Явный выбор: без графики, XFCE или GNOME
+Boot: %s · Disk: %s · Mode: %s	Загрузка: %s · Диск: %s · Режим: %s
+Filesystems: root %s · /home %s · swap %s · /home mode %s	ФС: корень %s · /home %s · подкачка %s · режим /home %s
+Stage3: %s · Profile: %s (%s)	Stage3: %s · Профиль: %s (%s)
+Kernel: %s · firmware: %s · microcode: %s · bootloader: %s	Ядро: %s · прошивки: %s · микрокод: %s · загрузчик: %s
+System: %s · %s · %s · keymap %s	Система: %s · %s · %s · раскладка %s
+Services: network %s · SSH %s · cron %s · chrony %s · syslog %s · sudo %s	Службы: сеть %s · SSH %s · cron %s · chrony %s · syslog %s · sudo %s
+Desktop: %s · VIDEO_CARDS: %s	Графика: %s · VIDEO_CARDS: %s
+User: %s (create: %s) · root password: %s	Пользователь: %s (создать: %s) · пароль root: %s
+Full configuration summary	Полная сводка конфигурации
+Enter to open	Enter — открыть
+Opens in a pager	Открывается в пейджере
+Passwords are required to finish the installation.	Для завершения установки нужны пароли.
+All settings have been collected. The installation will continue without further questions.	Все настройки собраны. Установка продолжится без дополнительных вопросов.
+All settings have been collected. The disk %s will be wiped and formatted, then the installation will run without further questions.\\n\\nThis cannot be undone.	Все настройки собраны. Диск %s будет стёрт и отформатирован, затем установка продолжится без дополнительных вопросов.\n\nЭто нельзя отменить.
+Start the installation?	Начать установку?
+Installation was not started.	Установка не была начата.
+Review and install	Проверка и установка
+Check the configuration, then confirm the installation	Проверьте конфигурацию и подтвердите установку
+Leave the setup?	Выйти из настройки?
+Settings entered so far are saved. The installation has not started.	Введённые настройки сохранены. Установка не начата.
+Settings were read from %s and saved to %s.\\nPasswords must be entered again.	Настройки прочитаны из %s и сохранены в %s.\nПароли нужно ввести заново.
+Gentoo Linux installer with a console interface.\\n\\nSupported: UEFI+GPT and BIOS+MBR, OpenRC and systemd,\\nbinary, compiled and manual kernels, GRUB,\\noptional XFCE + LightDM and GNOME + GDM.\\nNot supported: LUKS, LVM, RAID, Secure Boot signing and dual boot.\\n\\nThis project is distributed under the MIT license.\\nLogs: %s\\nState: %s	Установщик Gentoo Linux с консольным интерфейсом.\n\nПоддерживается: UEFI+GPT и BIOS+MBR, OpenRC и systemd,\nбинарное, скомпилированное и ручное ядро, GRUB,\nнеобязательные XFCE + LightDM и GNOME + GDM.\nНе поддерживается: LUKS, LVM, RAID, подпись Secure Boot и dual boot.\n\nПроект распространяется по лицензии MIT.\nЖурналы: %s\nСостояние: %s
+Continue installation	Продолжить установку
+Resume from the next unfinished step	Продолжить с первого незавершённого этапа
+Configure and install	Настроить и установить
+Collect all settings, confirm once, then install unattended	Собрать все настройки, подтвердить один раз и установить автоматически
+Wipe the selected partitions?	Стереть выбранные разделы?
+The selected partitions will be formatted and their data destroyed permanently.	Выбранные разделы будут отформатированы, а их данные безвозвратно уничтожены.
+Format	Форматировать
+The installation will continue from the next unfinished step without further questions.	Установка продолжится со следующего незавершённого этапа без дополнительных вопросов.
+Boot: %s · Disk: %s · Kernel: %s · Desktop: %s · User: %s	Загрузка: %s · Диск: %s · Ядро: %s · Графика: %s · Пользователь: %s
+root only	только root

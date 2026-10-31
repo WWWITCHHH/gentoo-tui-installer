@@ -15,8 +15,8 @@ Options:
   -c, --config FILE   use the specified configuration file
       --lang LANG     interface language: en (default) or ru
   -r, --resume        continue from the saved state immediately
-  -y, --yes           skip the destructive-action warning and ERASE prompt
-                      (passwords and interactive questions remain)
+  -y, --yes           skip the destructive-action warning and the disk
+                      confirmation (passwords and interactive questions remain)
       --debug         write debug messages to stderr
   -h, --help          show this help
   -V, --version       show the version
@@ -112,7 +112,7 @@ main_banner() {
     printf '  %s%s %s%s\n' "$C_BOLD$C_CYAN" "$GI_NAME" "$GI_VERSION" "$C_RESET"
     ui_wrap "$(T 'Git: %s' "${GI_GIT_VERSION:-$(T 'unavailable')}")"
     printf '\n'
-    ui_wrap "$(T 'The installer guides you through the Gentoo Handbook stages:\npartitioning -> Stage3 -> Portage -> kernel -> system -> services -> GRUB\n-> desktop environment -> finish.')"
+    ui_wrap "$(T 'The installer collects all settings in grouped pages first. After one final confirmation it installs Gentoo without asking between steps:\npartitioning -> Stage3 -> Portage -> kernel -> system -> services -> GRUB\n-> desktop environment -> finish.')"
     printf '\n'
     ui_wrap "$(T 'Configuration file: %s\nWorking directory:   %s\nLog:                 %s' \
         "$GI_CONFIG_FILE" "$GI_WORKDIR" "$GI_LOG_FILE")"
@@ -154,13 +154,18 @@ main_show_validation_errors() {
 }
 
 main_start_installation() {
+    local confirmed=${GI_INSTALL_CONFIRMED:-0}
     if state_is_done finalize; then
         ui_msg "$(T 'Installation already complete')" \
             "$(T 'Reset the state to install the system again.')"
         return 1
     fi
+    # The review page sets GI_UNATTENDED together with GI_INSTALL_CONFIRMED.
+    # Keep the pre-installation checks interactive and re-enable unattended mode
+    # only right before installation_run.
+    GI_UNATTENDED=0
 
-    if ! state_has_progress && ((!GI_ASSUME_YES)); then
+    if ! state_has_progress && ((!GI_ASSUME_YES)) && ((!confirmed)); then
         preflight_install_media_warning || return 1
     fi
     if ! preflight_run; then
@@ -169,6 +174,13 @@ main_start_installation() {
                 "$(T 'Fix the problems marked in red and try again.')"
         fi
         return 1
+    fi
+    # The confirmation belongs to this single start attempt. A failed install
+    # must ask again when it is retried from the main menu.
+    GI_INSTALL_CONFIRMED=0
+
+    if ! state_is_done system; then
+        wizard_ensure_passwords || return 1
     fi
 
     if [[ $CFG_DISK_MODE == auto ]]; then
@@ -180,6 +192,20 @@ main_start_installation() {
             "$(T 'Assign partitions for root, ESP/boot, swap and /home.')"
         disks_manual_assign || return 1
     fi
+    if [[ $CFG_DISK_MODE == manual ]] && ! state_is_done disk && ((!GI_MANUAL_OPTIONS_READY)); then
+        disks_manual_options || return 1
+        GI_MANUAL_OPTIONS_READY=1
+    fi
+
+    # A resumed installation that has not partitioned the disk yet still needs
+    # one explicit destructive confirmation. The review page already asked for
+    # it in the normal settings-first flow.
+    if ! state_is_done disk && ((!GI_ASSUME_YES)) && ((!confirmed)); then
+        if ! ui_modal_confirm "$(T 'Wipe the target disk?')" \
+            "$(T 'The disk %s will be repartitioned and formatted. All data on it will be destroyed permanently.' "${CFG_DISK:-$(T 'not selected')}")" no; then
+            return 1
+        fi
+    fi
 
     config_derived
     if ! config_validate; then
@@ -187,15 +213,28 @@ main_start_installation() {
         return 1
     fi
     config_save
-    log_info "installation started"
-    installation_run
+
+    if ((!GI_ASSUME_YES)) && ((!confirmed)); then
+        if ! ui_modal_confirm "$(T 'Start the installation?')" \
+            "$(T 'The installation will continue from the next unfinished step without further questions.')" no; then
+            return 1
+        fi
+    fi
+
+    GI_STEP_TOTAL=${#STATE_STEPS[@]}
+    GI_STEP_INDEX=0
+    GI_UNATTENDED=1
+    log_info "installation started (unattended)"
+    local status=0
+    installation_run || status=$?
+    GI_UNATTENDED=0
+    return "$status"
 }
 
 installation_run() {
     local step func index
     if state_is_done disk; then
-        ui_msg "$(T 'Restoring mounts')" \
-            "$(T 'The target system is already partitioned. Checking and mounting the partitions.')"
+        log_info "restoring mounts for an already partitioned system"
         if ! disks_mount_all; then
             ui_error "$(T 'Failed to mount')" \
                 "$(T 'Check the disk connection and partition settings.')"

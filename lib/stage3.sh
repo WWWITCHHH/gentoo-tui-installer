@@ -89,7 +89,6 @@ stage3_verify_sha256() {
         return 1
     fi
     printf '  %s%s %s ✓%s\n' "$C_GREEN" "$(T 'Got:')" "$actual" "$C_RESET"
-    ui_pause "$(T 'Enter - continue')"
     log_info "stage3 SHA256 verified: $actual"
     return 0
 }

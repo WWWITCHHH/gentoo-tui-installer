@@ -201,10 +201,6 @@ portage_select_profile() {
 
 portage_update_world() {
     [[ $CFG_UPDATE_WORLD == yes ]] || return 0
-    ui_header "$(T 'Updating @world')" \
-        "$(T 'This can take from tens of minutes to several hours. Do not power off.')"
-    ui_pause "$(T 'Enter - start the update · Esc - skip')"
-    [[ $UI_KEY != esc ]] || return 0
     chroot_run "$(T 'Updating @world')" \
         emerge --ask=n --update --deep --newuse @world || return 1
     chroot_run "$(T 'Updating the environment')" env-update || return 1

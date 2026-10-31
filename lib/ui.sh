@@ -1,5 +1,14 @@
 # shellcheck shell=bash
 # Self-contained ANSI TUI. No dialog/whiptail dependency.
+#
+# The interface collects settings first and installs afterwards. Every screen
+# therefore uses the same navigation model:
+#   ↑/↓  move through the content; from the last item ↓ enters the action bar
+#   ↑    from the action bar returns to the content
+#   ←/→  move between action-bar buttons
+#   Space selects an item in a choice window
+#   Enter activates the focused item or button
+#   F1 help, F2 save, F10 exit the current screen
 
 if [[ -t 1 && ${TERM:-dumb} != dumb && -z ${NO_COLOR:-} ]]; then
     C_RESET=$'\e[0m'
@@ -23,6 +32,18 @@ UI_CANCELLED=0
 UI_INT_MIN=0
 UI_INT_MAX=0
 UI_MENU_SUMMARY=()
+UI_RESULT=""
+UI_RESULTS=()
+UI_PAGE_ROWS=()
+UI_PAGE_MESSAGE=""
+UI_CHOICE_QUICK=0
+
+# Action bar button indices.
+UI_ACTION_BACK=0
+UI_ACTION_NEXT=1
+UI_ACTION_SAVE=2
+UI_ACTION_HELP=3
+UI_ACTION_EXIT=4
 
 ui_init() {
     GI_UI_ACTIVE=1
@@ -107,20 +128,33 @@ ui_header() {
     printf '\n'
 }
 
+# Renders the focusable bottom action bar. A focus index of -1 draws the bar
+# without a highlighted button; 0..4 highlights Back, Next, Save, Help or Exit.
 ui_action_bar() {
-    printf '\n%s  %s%s%s  %s%s%s  %s%s%s  %s%s%s\n' \
-        "$C_DIM" \
-        "$C_CYAN$C_BOLD" "$(T '<Select>')" "$C_DIM" \
-        "$C_CYAN$C_BOLD" "$(T '<Exit>')" "$C_DIM" \
-        "$C_CYAN$C_BOLD" "$(T '<Save>')" "$C_DIM" \
-        "$C_CYAN$C_BOLD" "$(T '<Help>')" "$C_RESET"
+    local focus=${1:--1} i
+    local -a labels=(
+        "<Back>"
+        "<Next>"
+        "<Save> F2"
+        "<Help> F1"
+        "<Exit> F10"
+    )
+    printf '\n '
+    for i in "${!labels[@]}"; do
+        if ((i == focus)); then
+            printf ' %s%s%s ' "$C_INVERSE$C_BOLD" "${labels[$i]}" "$C_RESET"
+        else
+            printf ' %s%s%s ' "$C_DIM$C_CYAN" "${labels[$i]}" "$C_RESET"
+        fi
+    done
+    printf '\n'
 }
 
 ui_footer() {
-    local hint
-    hint=$(i18n_text "${1:-↑/↓ — choose · Enter — confirm · Esc — back}")
+    local hint action_focus=${2:--1}
+    hint=$(i18n_text "${1:-↑/↓ — move · Enter — select · Esc — back}")
     printf '\n%s  %s%s\n' "$C_DIM" "$hint" "$C_RESET"
-    ui_action_bar
+    ui_action_bar "$action_focus"
 }
 
 ui_summary() {
@@ -150,11 +184,16 @@ ui_read_key() {
             'OP'|'[11~'|'[[A') UI_KEY=help ;;
             'OQ'|'[12~'|'[[B') UI_KEY=save ;;
             '[21~') UI_KEY=exit_action ;;
+            '[Z') UI_KEY=backtab ;;
             '') UI_KEY=esc ;;
             *) UI_KEY=esc ;;
         esac
     elif [[ -z $UI_KEY ]]; then
         UI_KEY=enter
+    elif [[ $UI_KEY == ' ' ]]; then
+        UI_KEY=space
+    elif [[ $UI_KEY == $'\t' ]]; then
+        UI_KEY=tab
     elif [[ $UI_KEY == $'\x7f' || $UI_KEY == $'\b' ]]; then
         UI_KEY=backspace
     elif [[ $UI_KEY == $'\x15' ]]; then
@@ -167,11 +206,34 @@ ui_read_key() {
     return 0
 }
 
-ui_menu() {
-    local title=$1 subtitle=$2 default_tag=$3
-    shift 3
-    local -a items=("$@") tags=() labels=() notes=()
-    local item tag label note
+# Standardized marker used by choice windows.
+#   single: ( ) / (*)
+#   multi:  [ ] / [*]
+ui_choice_marker() {
+    local mode=$1 selected=$2
+    if [[ $mode == multi ]]; then
+        [[ $selected == 1 ]] && printf '[*]' || printf '[ ]'
+        return 0
+    fi
+    [[ $selected == 1 ]] && printf '(*)' || printf '( )'
+}
+
+# Standardized single/multi choice window.
+#
+# Usage: ui_choice MODE TITLE SUBTITLE DEFAULT ITEM...
+#   MODE    single|multi
+#   DEFAULT tag for single, comma-separated tags for multi
+#   ITEM    tag|label|note
+#
+# Space selects or toggles the focused item. Enter on an item selects it and
+# moves focus to the Next button; Enter on Next confirms the window. Set
+# UI_CHOICE_QUICK=1 to let Enter on a single-choice item confirm immediately
+# (used by plain action menus such as the main menu).
+ui_choice() {
+    local mode=$1 title=$2 subtitle=$3 default=$4
+    shift 4
+    local -a items=("$@") tags=() labels=() notes=() marked=()
+    local item tag label note i selected_index=-1
     title=$(i18n_text "$title")
     subtitle=$(i18n_text "$subtitle")
     for item in "${items[@]}"; do
@@ -181,52 +243,66 @@ ui_menu() {
         tags+=("$tag")
         labels+=("$(i18n_text "$label")")
         notes+=("$(i18n_text "$note")")
+        marked+=(0)
     done
-    ((${#tags[@]} > 0)) || die "ui_menu: no menu items"
+    ((${#tags[@]} > 0)) || die "ui_choice: no menu items"
 
-    local selected=0 i
-    for i in "${!tags[@]}"; do
-        if [[ ${tags[$i]} == "$default_tag" ]]; then
-            selected=$i
-            break
-        fi
-    done
+    if [[ $mode == multi ]]; then
+        local -a defaults=()
+        IFS=',' read -r -a defaults <<<"$default"
+        for tag in "${defaults[@]}"; do
+            for i in "${!tags[@]}"; do
+                [[ ${tags[$i]} == "$tag" ]] && marked[$i]=1
+            done
+        done
+    else
+        for i in "${!tags[@]}"; do
+            if [[ ${tags[$i]} == "$default" ]]; then
+                marked[$i]=1
+                selected_index=$i
+                break
+            fi
+        done
+    fi
 
-    local page_size=5 offset=0 page_end note max_len key summary_lines
+    local focus=0 action=-1 key page_size offset=0 page_end max_len summary_lines
+    ((selected_index >= 0)) && focus=$selected_index
     while :; do
         if declare -F ui_on_summary >/dev/null 2>&1; then
             ui_on_summary
         fi
         summary_lines=${#UI_MENU_SUMMARY[@]}
         page_size=$(( $(ui_height) - 11 - summary_lines ))
-        ((page_size < 5)) && page_size=5
-        if ((selected < offset)); then offset=$selected; fi
-        if ((selected >= offset + page_size)); then offset=$((selected - page_size + 1)); fi
+        ((page_size < 4)) && page_size=4
+        if ((focus < offset)); then offset=$focus; fi
+        if ((focus >= offset + page_size)); then offset=$((focus - page_size + 1)); fi
         page_end=$((offset + page_size))
         ((page_end > ${#tags[@]})) && page_end=${#tags[@]}
 
         ui_header "$title" "$subtitle"
+        max_len=$(( $(ui_width) - 12 ))
         for ((i = offset; i < page_end; i++)); do
-            max_len=$(( $(ui_width) - 12 ))
             label=${labels[$i]}
             (( ${#label} > max_len )) && label="${label:0:max_len-1}…"
-            if ((i == selected)); then
-                printf '  %s❯ %d. %s%s\n' "$C_CYAN$C_BOLD" "$((i + 1))" "$label" "$C_RESET"
+            local marker
+            marker=$(ui_choice_marker "$mode" "${marked[$i]}")
+            if ((action < 0 && i == focus)); then
+                printf '  %s❯ %s %s%s\n' "$C_CYAN$C_BOLD" "$marker" "$label" "$C_RESET"
             else
-                printf '    %s%d.%s %s\n' "$C_DIM" "$((i + 1))" "$C_RESET" "$label"
+                printf '    %s%s%s %s\n' "$C_DIM" "$marker" "$C_RESET" "$label"
             fi
         done
         if (( ${#tags[@]} > page_size )); then
             printf '\n%s  %s%s\n' "$C_DIM" \
                 "$(T 'Showing %d–%d of %d' "$((offset + 1))" "$page_end" "${#tags[@]}")" "$C_RESET"
         fi
-        note=${notes[$selected]}
+        note=${notes[$focus]}
         if [[ -n $note ]]; then
             printf '\n'
             ui_wrap "$note"
         fi
         ui_summary
-        ui_footer
+        ui_footer "$(T '↑/↓ — move · Space — select · Enter — continue · Esc — back')" "$action"
         if ! ui_read_key; then
             UI_CANCELLED=1
             return 1
@@ -234,17 +310,105 @@ ui_menu() {
         key=$UI_KEY
         case "$key" in
             up)
-                ((selected > 0)) && selected=$((selected - 1))
+                if ((action >= 0)); then
+                    action=-1
+                    focus=$page_end
+                    ((focus >= ${#tags[@]})) && focus=$((${#tags[@]} - 1))
+                else
+                    ((focus > 0)) && focus=$((focus - 1))
+                fi
                 ;;
             down)
-                ((selected < ${#tags[@]} - 1)) && selected=$((selected + 1))
+                if ((action < 0)); then
+                    if ((focus < ${#tags[@]} - 1)); then
+                        focus=$((focus + 1))
+                    else
+                        action=$UI_ACTION_NEXT
+                    fi
+                fi
                 ;;
-            home) selected=0 ;;
-            end) selected=$((${#tags[@]} - 1)) ;;
+            home)
+                ((action < 0)) && focus=0
+                ;;
+            end)
+                ((action < 0)) && focus=$((${#tags[@]} - 1))
+                ;;
+            left|backtab)
+                if ((action >= 0 && action > 0)); then
+                    action=$((action - 1))
+                fi
+                ;;
+            right|tab)
+                if ((action >= 0 && action < UI_ACTION_EXIT)); then
+                    action=$((action + 1))
+                fi
+                ;;
+            space)
+                if ((action < 0)); then
+                    if [[ $mode == multi ]]; then
+                        [[ ${marked[$focus]} == 1 ]] && marked[$focus]=0 || marked[$focus]=1
+                    else
+                        for i in "${!marked[@]}"; do marked[$i]=0; done
+                        marked[$focus]=1
+                    fi
+                fi
+                ;;
             enter)
-                UI_RESULT=${tags[$selected]}
-                UI_CANCELLED=0
-                return 0
+                if ((action < 0)); then
+                    if ((UI_CHOICE_QUICK)); then
+                        # Action menus confirm the focused entry immediately.
+                        for i in "${!marked[@]}"; do marked[$i]=0; done
+                        marked[$focus]=1
+                        UI_RESULT=${tags[$focus]}
+                        UI_RESULTS=("$UI_RESULT")
+                        UI_CANCELLED=0
+                        return 0
+                    fi
+                    # A real choice is made with Space; Enter only continues to
+                    # the action bar so it cannot silently change an answer.
+                    action=$UI_ACTION_NEXT
+                    continue
+                fi
+                case "$action" in
+                    "$UI_ACTION_BACK")
+                        UI_CANCELLED=1
+                        return 1
+                        ;;
+                    "$UI_ACTION_NEXT")
+                        if [[ $mode == multi ]]; then
+                            UI_RESULTS=()
+                            for i in "${!marked[@]}"; do
+                                [[ ${marked[$i]} == 1 ]] && UI_RESULTS+=("${tags[$i]}")
+                            done
+                            UI_RESULT=${UI_RESULTS[0]:-}
+                        else
+                            UI_RESULTS=()
+                            for i in "${!marked[@]}"; do
+                                [[ ${marked[$i]} == 1 ]] && UI_RESULTS+=("${tags[$i]}")
+                            done
+                            # Navigating straight to Next without Space keeps the
+                            # focused item as the answer; an explicit Space
+                            # selection is always preserved.
+                            if ((${#UI_RESULTS[@]} == 0)); then
+                                marked[$focus]=1
+                                UI_RESULTS=("${tags[$focus]}")
+                            fi
+                            UI_RESULT=${UI_RESULTS[0]}
+                        fi
+                        UI_CANCELLED=0
+                        return 0
+                        ;;
+                    "$UI_ACTION_SAVE")
+                        ui_save_action
+                        ;;
+                    "$UI_ACTION_HELP")
+                        ui_show_help
+                        ;;
+                    "$UI_ACTION_EXIT")
+                        UI_CANCELLED=1
+                        return 1
+                        ;;
+                esac
                 ;;
             help)
                 ui_show_help
@@ -252,17 +416,103 @@ ui_menu() {
             save)
                 ui_save_action
                 ;;
-            esc|left|q|exit_action)
+            esc|exit_action|q)
                 UI_CANCELLED=1
                 return 1
                 ;;
             [1-9])
-                i=$((offset + key - 1))
-                if ((i < ${#tags[@]})); then
-                    UI_RESULT=${tags[$i]}
+                if ((action < 0)); then
+                    i=$((offset + key - 1))
+                    if ((i < ${#tags[@]})); then
+                        focus=$i
+                    fi
+                fi
+                ;;
+        esac
+    done
+}
+
+# Plain action menu built on the standardized choice window. Enter on an item
+# selects and confirms immediately, as expected from a list of actions.
+ui_menu() {
+    local title=$1 subtitle=$2 default_tag=$3
+    shift 3
+    local first=${1%%|*}
+    [[ -z $default_tag ]] && default_tag=$first
+    local previous=$UI_CHOICE_QUICK
+    UI_CHOICE_QUICK=1
+    ui_choice single "$title" "$subtitle" "$default_tag" "$@"
+    local status=$?
+    UI_CHOICE_QUICK=$previous
+    return "$status"
+}
+
+ui_modal_confirm() {
+    local title=$1 body=$2 default=${3:-no}
+    local confirm_label=${4:-$(T 'Confirm')} cancel_label=${5:-$(T 'Cancel')}
+    local focus=0 key width inner border line i
+    [[ $default == yes ]] && focus=1
+    title=$(i18n_text "$title")
+    body=$(i18n_text "$body")
+    width=$(ui_width)
+    ((width > 76)) && width=76
+    inner=$((width - 6))
+    printf -v border '%*s' "$width" ''
+    border=${border// /─}
+
+    while :; do
+        ui_header "$title" ""
+        printf '  %s╭%s╮%s\n' "$C_CYAN" "$border" "$C_RESET"
+        while IFS= read -r line; do
+            local -a folded=()
+            if [[ -z $line ]]; then
+                printf '  %s│%s %-*s %s│%s\n' "$C_CYAN" "$C_RESET" "$inner" "" "$C_CYAN" "$C_RESET"
+                continue
+            fi
+            mapfile -t folded < <(printf '%s\n' "$line" | fold -s -w "$inner")
+            for line in "${folded[@]}"; do
+                printf '  %s│%s %-*s %s│%s\n' "$C_CYAN" "$C_RESET" "$inner" "$line" "$C_CYAN" "$C_RESET"
+            done
+        done <<<"$body"
+        printf '  %s╰%s╯%s\n' "$C_CYAN" "$border" "$C_RESET"
+        printf '\n '
+        for i in 0 1; do
+            local label
+            if ((i == 0)); then label=$cancel_label; else label=$confirm_label; fi
+            if ((i == focus)); then
+                printf ' %s%s%s ' "$C_INVERSE$C_BOLD" "$label" "$C_RESET"
+            else
+                printf ' %s%s%s ' "$C_DIM$C_CYAN" "$label" "$C_RESET"
+            fi
+        done
+        printf '\n'
+        printf '\n%s  %s%s\n' "$C_DIM" \
+            "$(T '←/→ — choose · Enter — confirm · Esc — cancel')" "$C_RESET"
+        if ! ui_read_key; then
+            UI_CANCELLED=1
+            return 1
+        fi
+        key=$UI_KEY
+        case "$key" in
+            left|backtab) focus=0 ;;
+            right|tab) focus=1 ;;
+            enter)
+                if ((focus == 1)); then
                     UI_CANCELLED=0
                     return 0
                 fi
+                UI_CANCELLED=1
+                return 1
+                ;;
+            help)
+                ui_show_help
+                ;;
+            save)
+                ui_save_action
+                ;;
+            esc|exit_action|q)
+                UI_CANCELLED=1
+                return 1
                 ;;
         esac
     done
@@ -270,22 +520,24 @@ ui_menu() {
 
 ui_confirm() {
     local title=$1 question=$2 default=${3:-yes}
-    local default_tag=yes
-    [[ $default == no ]] && default_tag=no
-    if ui_menu "$title" "$question" "$default_tag" \
-        "yes|$(T 'Yes')|$(T 'Confirm the action')" \
-        "no|$(T 'No')|$(T 'Return without changes')"; then
-        [[ $UI_RESULT == yes ]]
-        return
+    local default_tag=no
+    [[ $default == yes ]] && default_tag=yes
+    if ui_modal_confirm "$title" "$question" "$default_tag" \
+        "$(T 'Yes')" "$(T 'No')"; then
+        return 0
     fi
     return 1
 }
 
 ui_msg() {
     local title=$1 body=${2:-}
+    if (( ${GI_UNATTENDED:-0} )); then
+        log_info "message: $title"
+        return 0
+    fi
     ui_header "$title"
     ui_wrap "$body"
-    ui_footer "Enter — continue"
+    ui_footer "$(T 'Enter — continue')"
     ui_read_key || true
 }
 
@@ -293,12 +545,18 @@ ui_error() {
     local title=$1 body=${2:-}
     ui_header "$title" "" "$C_RED"
     ui_wrap "$body"
-    ui_footer "Enter — close"
+    ui_footer "$(T 'Enter — close')"
     ui_read_key || true
 }
 
 ui_pause() {
-    ui_footer "${1:-Enter — continue}"
+    # Installation is unattended after the review confirmation. Any pause left
+    # on the normal path is a no-op so the process never waits for a key.
+    if (( ${GI_UNATTENDED:-0} )); then
+        UI_KEY=""
+        return 0
+    fi
+    ui_footer "${1:-$(T 'Enter — continue')}"
     ui_read_key || true
 }
 
@@ -314,7 +572,7 @@ ui_show_file() {
     fi
     printf '\n'
     printf '%s\e[?25l' "$C_RESET"
-    ui_pause "Enter — back"
+    ui_pause "$(T 'Enter — back')"
 }
 
 ui_input() {
@@ -349,7 +607,7 @@ ui_input() {
         if [[ -n $error ]]; then
             printf '\n  %s✖ %s%s\n' "$C_RED" "$(i18n_text "$error")" "$C_RESET"
         fi
-        ui_footer "Enter — accept · Ctrl-U — clear · Esc — cancel"
+        ui_footer "$(T 'Enter — accept · Ctrl-U — clear · Esc — cancel')"
         if ! ui_read_key; then
             UI_CANCELLED=1
             return 1
@@ -414,15 +672,15 @@ _ui_validate_int_range() {
 ui_password() {
     local title=$1 prompt=$2
     ui_input "$title" "$prompt" "" validate_nonempty \
-        "Input is hidden. The password is not written to disk." yes
+        "$(T 'Input is hidden. The password is not written to disk.')" yes
 }
 
 ui_password_twice() {
     local title=$1 first second
     while :; do
-        ui_password "$title" "Enter password:" || return 1
+        ui_password "$title" "$(T 'Enter password:')" || return 1
         first=$UI_RESULT
-        ui_password "$title" "Repeat password:" || return 1
+        ui_password "$title" "$(T 'Repeat password:')" || return 1
         second=$UI_RESULT
         if [[ $first == "$second" ]]; then
             UI_SECRET=$first
@@ -430,7 +688,7 @@ ui_password_twice() {
             UI_RESULT=""
             return 0
         fi
-        ui_error "Passwords do not match" "Please try again."
+        ui_error "$(T 'Passwords do not match')" "$(T 'Please try again.')"
     done
 }
 
@@ -439,7 +697,152 @@ ui_step_intro() {
     GI_STEP_INDEX=$index
     GI_STEP_TOTAL=$total
     ui_header "$(T 'Step %d of %d: %s' "$index" "$total" "$title")" "$body"
-    ui_pause "Enter — start step"
+    if (( ${GI_UNATTENDED:-0} )); then
+        return 0
+    fi
+    ui_pause "$(T 'Enter — start step')"
+}
+
+# ---------------------------------------------------------------------------
+# Reusable form page
+# ---------------------------------------------------------------------------
+#
+# ui_page_run TITLE SUBTITLE ROWS_FUNC EDIT_FUNC [VALIDATE_FUNC]
+#
+# ROWS_FUNC must populate the global UI_PAGE_ROWS array with rows in the form
+#   tag|label|value|note
+# EDIT_FUNC is called with the tag of the activated row. VALIDATE_FUNC is
+# called before Next and may set UI_PAGE_MESSAGE to explain why the page cannot
+# be left.
+#
+# Return values: 0 = Next, 1 = Back, 2 = Exit.
+ui_page_run() {
+    local title=$1 subtitle=$2 rows_func=$3 edit_func=$4 validate_func=${5:-}
+    local focus=0 action=-1 key rc i page_size offset=0 page_end tag label value note
+    local -a rows=()
+    while :; do
+        UI_PAGE_ROWS=()
+        UI_PAGE_BODY=""
+        "$rows_func"
+        rows=("${UI_PAGE_ROWS[@]}")
+        ((${#rows[@]})) || die "ui_page_run: no rows"
+        ((focus >= ${#rows[@]})) && focus=$((${#rows[@]} - 1))
+        page_size=$(( $(ui_height) - 9 ))
+        ((page_size < 4)) && page_size=4
+        if ((focus < offset)); then offset=$focus; fi
+        if ((focus >= offset + page_size)); then offset=$((focus - page_size + 1)); fi
+        page_end=$((offset + page_size))
+        ((page_end > ${#rows[@]})) && page_end=${#rows[@]}
+
+        ui_header "$title" "$subtitle"
+        if [[ -n ${UI_PAGE_BODY:-} ]]; then
+            ui_wrap "$UI_PAGE_BODY"
+            printf '\n'
+        fi
+        for ((i = offset; i < page_end; i++)); do
+            IFS='|' read -r tag label value note <<<"${rows[$i]}"
+            label=$(i18n_text "$label")
+            value=$(i18n_text "$value")
+            if ((action < 0 && i == focus)); then
+                printf '  %s❯ %s:%s %s%s\n' "$C_CYAN$C_BOLD" "$label" "$C_RESET" "$C_BOLD$C_WHITE" "$value"
+                if [[ -n $note ]]; then
+                    printf '      %s%s%s\n' "$C_DIM" "$(i18n_text "$note")" "$C_RESET"
+                fi
+            else
+                printf '    %s%s:%s %s\n' "$C_DIM" "$label" "$C_RESET" "$value"
+            fi
+        done
+        if (( ${#rows[@]} > page_size )); then
+            printf '\n%s  %s%s\n' "$C_DIM" \
+                "$(T 'Showing %d–%d of %d' "$((offset + 1))" "$page_end" "${#rows[@]}")" "$C_RESET"
+        fi
+        if [[ -n $UI_PAGE_MESSAGE ]]; then
+            printf '\n  %s✖ %s%s\n' "$C_RED" "$(i18n_text "$UI_PAGE_MESSAGE")" "$C_RESET"
+        fi
+        ui_footer "$(T '↑/↓ — move · Enter — edit · Esc — back')" "$action"
+        if ! ui_read_key; then
+            UI_CANCELLED=1
+            return 1
+        fi
+        key=$UI_KEY
+        case "$key" in
+            up)
+                if ((action >= 0)); then
+                    action=-1
+                    focus=$page_end
+                    ((focus >= ${#rows[@]})) && focus=$((${#rows[@]} - 1))
+                else
+                    ((focus > 0)) && focus=$((focus - 1))
+                fi
+                ;;
+            down)
+                if ((action < 0)); then
+                    if ((focus < ${#rows[@]} - 1)); then
+                        focus=$((focus + 1))
+                    else
+                        action=$UI_ACTION_NEXT
+                    fi
+                fi
+                ;;
+            home)
+                ((action < 0)) && focus=0
+                ;;
+            end)
+                ((action < 0)) && focus=$((${#rows[@]} - 1))
+                ;;
+            left|backtab)
+                if ((action >= 0 && action > 0)); then action=$((action - 1)); fi
+                ;;
+            right|tab)
+                if ((action >= 0 && action < UI_ACTION_EXIT)); then action=$((action + 1)); fi
+                ;;
+            enter)
+                if ((action < 0)); then
+                    IFS='|' read -r tag _ _ _ <<<"${rows[$focus]}"
+                    UI_PAGE_MESSAGE=""
+                    "$edit_func" "$tag" || true
+                    continue
+                fi
+                case "$action" in
+                    "$UI_ACTION_BACK")
+                        UI_CANCELLED=1
+                        return 1
+                        ;;
+                    "$UI_ACTION_NEXT")
+                        if [[ -n $validate_func ]] && ! "$validate_func"; then
+                            continue
+                        fi
+                        UI_CANCELLED=0
+                        return 0
+                        ;;
+                    "$UI_ACTION_SAVE")
+                        ui_save_action
+                        ;;
+                    "$UI_ACTION_HELP")
+                        ui_show_help
+                        ;;
+                    "$UI_ACTION_EXIT")
+                        UI_CANCELLED=1
+                        return 2
+                        ;;
+                esac
+                ;;
+            help)
+                ui_show_help
+                ;;
+            save)
+                ui_save_action
+                ;;
+            esc|q)
+                UI_CANCELLED=1
+                return 1
+                ;;
+            exit_action)
+                UI_CANCELLED=1
+                return 2
+                ;;
+        esac
+    done
 }
 
 ui_show_help() {
@@ -447,15 +850,8 @@ ui_show_help() {
         ui_on_help
         return 0
     fi
-    ui_msg "Keyboard help" \
-        "Arrow keys — move in a menu
-Enter — select or confirm
-Esc — go back or leave the current screen
-F1 — this help
-F2 or Ctrl-S — save the configuration
-F10 — exit the current menu
-
-The bottom action bar always shows the available actions."
+    ui_msg "$(T 'Keyboard help')" \
+        "$(T 'Arrow keys — move through items and the action bar\nDown on the last item — go to the action bar\nUp on the action bar — return to the items\nLeft/Right — choose an action-bar button\nSpace — select an item in a choice window\nEnter — edit a field or activate a button\nEsc — go back\nF1 — this help\nF2 or Ctrl-S — save the configuration\nF10 — exit the current page\n\nImportant actions always require a separate confirmation.')"
 }
 
 ui_save_action() {
@@ -463,7 +859,7 @@ ui_save_action() {
         ui_on_save
         return 0
     fi
-    ui_msg "Save" "The configuration is saved automatically when the wizard changes a value."
+    ui_msg "$(T 'Save')" "$(T 'The configuration is saved automatically when the wizard changes a value.')"
 }
 
 ui_readonly() {

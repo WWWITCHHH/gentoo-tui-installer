@@ -127,6 +127,10 @@ desktop_intro() {
             ;;
     esac
     body+=$'\n\n'"$(T 'Make sure CFLAGS contains no unsuitable optimizations and VIDEO_CARDS lists\nyour GPU drivers: with empty VIDEO_CARDS, Xorg may run without acceleration.')"
+    log_info "desktop intro: $label"
+    if (( ${GI_UNATTENDED:-0} )); then
+        return 0
+    fi
     ui_header "$(T 'Desktop environment: %s' "$label")" "$body"
     ui_pause "$(T 'Enter - install the desktop environment')"
 }

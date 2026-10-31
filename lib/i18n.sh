@@ -79,8 +79,10 @@ i18n_format() {
             i18n_missing "$key"
         fi
     fi
+    # UI strings use \n escapes so the catalogue stays a single-line TSV.
+    # Expand them in both languages even when the string has no arguments.
     if (($# == 0)); then
-        printf '%s' "$fmt"
+        printf '%b' "$fmt"
         return 0
     fi
     # shellcheck disable=SC2059

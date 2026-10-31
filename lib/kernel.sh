@@ -47,14 +47,6 @@ kernel_install_initramfs_tools() {
 
 kernel_install_firmware() {
     [[ $CFG_FIRMWARE == yes ]] || return 0
-    ui_header "$(T 'Device firmware')" \
-        "$(T 'The sys-kernel/linux-firmware package contains firmware for Wi-Fi, GPUs and other devices.\nIt is hundreds of megabytes and installation may take a while.')"
-    ui_pause "$(T 'Enter - install · Esc - skip')"
-    if [[ $UI_KEY == esc ]]; then
-        CFG_FIRMWARE=no
-        warn "$(T 'linux-firmware installation was skipped by the user')"
-        return 0
-    fi
     chroot_run "$(T 'Installing linux-firmware')" \
         emerge --ask=n --quiet sys-kernel/linux-firmware || return 1
 }
@@ -116,9 +108,6 @@ kernel_install_binary() {
 }
 
 kernel_install_distribution() {
-    ui_header "$(T 'Building the kernel')" \
-        "$(T 'sys-kernel/gentoo-kernel will be built with the Gentoo configuration.\nThe build can take from a few minutes to an hour.')"
-    ui_pause "$(T 'Enter - start the build')"
     chroot_run "$(T 'Building gentoo-kernel')" \
         emerge --ask=n --quiet sys-kernel/gentoo-kernel || return 1
 }
@@ -141,9 +130,6 @@ kernel_install_manual() {
 
     jobs=$(portage_make_jobs)
     cmd="cd /usr/src/linux && make -j${jobs} && make modules_install && make install"
-    ui_header "$(T 'Building the kernel')" \
-        "$(T 'make -j%s, then modules_install and install.\nThis is the longest installation step.' "$jobs")"
-    ui_pause "$(T 'Enter - start the build')"
     chroot_shell "$(T 'Building and installing the kernel')" "$cmd" || return 1
 }
 

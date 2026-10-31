@@ -28,6 +28,11 @@ ui_last_log_line() {
 
 ui_failure_choice() {
     local label=$1 log=$2 status=$3 key line width
+    if (( ${GI_UNATTENDED:-0} )); then
+        log_error "unattended failure: $label (exit code $status), log: $log"
+        GI_ABORTED=1
+        return 1
+    fi
     while :; do
         ui_header "$(T 'Error')" "$(T 'Command exited with code %s' "$status")" "$C_RED"
         printf '  %s%s%s\n\n' "$C_BOLD" "$label" "$C_RESET"

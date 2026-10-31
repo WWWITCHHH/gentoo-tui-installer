@@ -29,6 +29,11 @@ GI_LAST_COMMAND=""
 GI_DEBUG=0
 GI_RESUME=0
 GI_ASSUME_YES=0
+GI_INSTALL_CONFIRMED=0
+GI_UNATTENDED=0
+GI_MANUAL_OPTIONS_READY=0
+GI_ROOT_PASSWORD=""
+GI_USER_PASSWORD=""
 
 CONFIG_KEYS=(
     SCHEMA UI_LANGUAGE
@@ -293,7 +298,7 @@ config_defaults() {
     CFG_CFLAGS="-march=native -O2 -pipe"
     CFG_VIDEO_CARDS=""
     CFG_USE_EXTRA=""
-    CFG_KERNEL_MODE=bin
+    CFG_KERNEL_MODE=""
     CFG_FIRMWARE=yes
     CFG_MICROCODE=auto
     CFG_KERNEL_CMDLINE="quiet"
@@ -309,8 +314,10 @@ config_defaults() {
     CFG_CHRONY=yes
     CFG_SYSLOG=yes
     CFG_SUDO=yes
-    CFG_USERNAME=gentoo
-    CFG_CREATE_USER=yes
+    # No account is created unless the user asks for one on the users page;
+    # the wizard never invents a user name silently.
+    CFG_USERNAME=""
+    CFG_CREATE_USER=no
 }
 
 config_key_valid() {
