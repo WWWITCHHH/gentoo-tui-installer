@@ -924,3 +924,12 @@ No supported GPU was detected; Xorg will use the modesetting driver.	Подде�
 Configuration warnings:	Предупреждения конфигурации:
 Continue anyway	Продолжить всё равно
 Choose OpenRC or systemd, then the Stage3 source and package build settings	Выберите OpenRC или systemd, затем источник Stage3 и параметры сборки пакетов
+Automatic (generated config)	Автоматически (сгенерированный конфиг)
+gentoo-sources with a .config generated from this hardware; no menuconfig	gentoo-sources с .config, сгенерированным по оборудованию; без menuconfig
+Choose the binary, compiled or automatic kernel explicitly.	Явно выберите бинарное, скомпилированное или автоматическое ядро.
+The kernel is an explicit choice: a prebuilt binary, a kernel compiled with the Gentoo configuration, an automatically generated configuration, or manual menuconfig. Only manual configuration remains interactive.	Ядро выбирается явно: готовый бинарный пакет, сборка с конфигурацией Gentoo, автоматически сгенерированная конфигурация или ручной menuconfig. Интерактивной остаётся только ручная настройка.
+Generating the default kernel configuration	Генерация конфигурации ядра по умолчанию
+Generating the kernel configuration	Генерация конфигурации ядра
+Kernel configuration is incomplete	Конфигурация ядра неполна
+The generated .config is missing required options: %s	В сгенерированном .config отсутствуют обязательные опции: %s
+The generated .config file was not created.	Сгенерированный файл .config не был создан.
