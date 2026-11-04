@@ -46,7 +46,9 @@ desktop_packages() {
     # elogind on OpenRC systems.
     printf '%s\n' sys-apps/dbus
     if [[ $CFG_INIT == openrc ]]; then
-        printf '%s\n' sys-auth/elogind
+        # GDM and LightDM do not ship an OpenRC init script. The
+        # display-manager wrapper provides /etc/init.d/display-manager.
+        printf '%s\n' gui-libs/display-manager-init sys-auth/elogind
     fi
 }
 

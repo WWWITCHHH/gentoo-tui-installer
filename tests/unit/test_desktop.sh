@@ -27,6 +27,7 @@ assert_contains "$xfce_packages" "xfce-base/xfce4-meta" "XFCE meta package"
 assert_contains "$xfce_packages" "x11-misc/lightdm" "XFCE uses LightDM"
 assert_contains "$xfce_packages" "x11-misc/lightdm-gtk-greeter" "LightDM greeter"
 assert_contains "$xfce_packages" "sys-auth/elogind" "OpenRC XFCE needs elogind"
+assert_contains "$xfce_packages" "gui-libs/display-manager-init" "OpenRC XFCE needs the display-manager init script"
 assert_not_contains "$xfce_packages" "gnome-base/gnome" "XFCE does not pull GNOME"
 
 CFG_DESKTOP=gnome
@@ -38,12 +39,14 @@ assert_contains "$gnome_openrc" "gnome-base/gnome" "GNOME meta package"
 assert_contains "$gnome_openrc" "gnome-base/gdm" "GNOME uses GDM"
 assert_contains "$gnome_openrc" "sys-apps/dbus" "OpenRC GNOME needs dbus"
 assert_contains "$gnome_openrc" "sys-auth/elogind" "OpenRC GNOME needs elogind"
+assert_contains "$gnome_openrc" "gui-libs/display-manager-init" "OpenRC GNOME needs the display-manager init script"
 
 CFG_INIT=systemd
 gnome_systemd=$(desktop_packages)
 assert_contains "$gnome_systemd" "gnome-base/gnome"
 assert_contains "$gnome_systemd" "sys-apps/dbus" "systemd desktop still needs dbus"
 assert_not_contains "$gnome_systemd" "sys-auth/elogind" "systemd does not need elogind"
+assert_not_contains "$gnome_systemd" "gui-libs/display-manager-init" "systemd does not need the OpenRC display-manager wrapper"
 
 CFG_DESKTOP=none
 assert_eq "" "$(desktop_display_manager)" "no display manager without desktop"
