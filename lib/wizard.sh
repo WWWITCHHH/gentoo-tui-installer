@@ -363,11 +363,6 @@ wizard_system_rows() {
         "keymap|$(T 'Console keymap')|$CFG_KEYMAP|$(T 'For example us or ru')"
         "hwclock|$(T 'Hardware clock')|$CFG_HWCLOCK|$(T 'UTC or local')"
     )
-    if ! ((GI_EASY_MODE)); then
-        UI_PAGE_ROWS+=(
-            "language|$(T 'Installer language')|$(i18n_language_label "${CFG_UI_LANGUAGE:-en}")|$(T 'English or Russian interface')"
-        )
-    fi
 }
 
 wizard_system_edit() {
@@ -395,9 +390,6 @@ wizard_system_edit() {
                 "UTC|UTC|$(T 'Recommended, especially for dual boot')" \
                 "local|Local|$(T 'Local time')" || true
             ;;
-        language)
-            i18n_choose_language
-            ;;
     esac
 }
 
@@ -423,7 +415,7 @@ wizard_system_validate() {
 
 wizard_page_system() {
     ui_page_run "$(T 'System')" \
-        "$(T 'Hostname, time, locale, console and interface language')" \
+        "$(T 'Hostname, time, locale and console settings')" \
         wizard_system_rows wizard_system_edit wizard_system_validate
 }
 
@@ -1095,7 +1087,7 @@ wizard_update_summary() {
     UI_MENU_SUMMARY=(
         "$(T 'Boot: %s · Disk: %s · FS: %s' "$boot" "$disk" "$fs")"
         "$(T 'Stage3: %s · Kernel: %s · Desktop: %s' "$CFG_STAGE_FLAVOR" "$kernel" "$(desktop_label)")"
-        "$(T 'Progress: %s steps · Language: %s · Locale: %s' "$progress" "$(i18n_language_label "${CFG_UI_LANGUAGE:-en}")" "$CFG_LOCALE")"
+        "$(T 'Progress: %s steps · Locale: %s' "$progress" "$CFG_LOCALE")"
     )
 }
 
@@ -1148,7 +1140,7 @@ wizard_summary_text() {
     printf '%s\n' "$(T 'Network: %s; SSH: %s; cron: %s; chrony: %s; syslog: %s; sudo: %s' \
         "$CFG_NETWORK" "$CFG_SSH" "$CFG_CRON" "$CFG_CHRONY" "$CFG_SYSLOG" "$CFG_SUDO")"
     printf '%s\n' "$(T 'User: %s (create: %s)' "$CFG_USERNAME" "$CFG_CREATE_USER")"
-    printf '%s\n' "$(T 'Language: %s; target locale: %s' "$(i18n_language_label "${CFG_UI_LANGUAGE:-en}")" "$CFG_LOCALE")"
+    printf '%s\n' "$(T 'Target locale: %s' "$CFG_LOCALE")"
 }
 
 wizard_show_summary() {
@@ -1181,14 +1173,6 @@ wizard_load_config() {
     config_load "$path"
     GI_CONFIG_EXISTED=1
     GI_MODE_DEFAULTS_APPLIED=1
-    case "${CFG_UI_LANGUAGE:-en}" in
-        en|ru) ;;
-        *)
-            warn "$(T 'Unknown UI language "%s"; using English.' "$CFG_UI_LANGUAGE")"
-            CFG_UI_LANGUAGE=en
-            ;;
-    esac
-    i18n_init "$CFG_UI_LANGUAGE"
     GI_NETWORK_FORCED=0
     config_derived
     # Secrets belong to one process and are never part of a configuration file.
@@ -1239,7 +1223,6 @@ wizard_main() {
             "summary|$(T 'Check configuration')|$(T 'Show the summary and validation errors')"
             "load|$(T 'Load configuration')|$(T 'Read a KEY="value" file')"
             "save|$(T 'Save configuration')|$(T 'Write the settings to %s' "$GI_CONFIG_FILE")"
-            "language|$(T 'Language: %s' "$(i18n_language_label "${CFG_UI_LANGUAGE:-en}")")|$(T 'English or Russian interface')"
             "about|$(T 'About')|$(T 'Version, limitations, logs')"
             "shell|$(T 'Open a shell')|$(T 'Leave the installer without unmounting')"
         )
@@ -1265,7 +1248,6 @@ wizard_main() {
             summary) wizard_show_summary || true ;;
             load) wizard_load_config ;;
             save) ui_on_save ;;
-            language) i18n_choose_language ;;
             about) wizard_about ;;
             shell) ui_interactive "$(T 'Shell (exit to return to the installer)')" /bin/bash -l ;;
             reset) wizard_reset_state ;;

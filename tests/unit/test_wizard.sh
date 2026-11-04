@@ -2,7 +2,6 @@
 set -Eeuo pipefail
 source "${GI_TEST_ROOT}/tests/harness.sh"
 source "${GI_TEST_ROOT}/lib/core.sh"
-source "${GI_TEST_ROOT}/lib/i18n.sh"
 source "${GI_TEST_ROOT}/lib/validate.sh"
 source "${GI_TEST_ROOT}/lib/ui.sh"
 source "${GI_TEST_ROOT}/lib/desktop.sh"
@@ -46,10 +45,8 @@ assert_not_contains "$UI_SECRET" "leftover" "old secret is replaced"
 # ---------------------------------------------------------------------------
 # Compact summary and configuration persistence
 # ---------------------------------------------------------------------------
-i18n_init en
 config_defaults
 STATE_DONE=([disk]=1 [stage3]=1)
-CFG_UI_LANGUAGE=en
 CFG_BOOT_MODE=uefi
 CFG_DISK=""
 CFG_ROOT_FS=xfs
@@ -66,16 +63,7 @@ assert_contains "$summary" "FS: xfs" "summary reports the root filesystem"
 assert_contains "$summary" "Stage3: openrc" "summary reports the Stage3 flavor"
 assert_contains "$summary" "Kernel: bin" "summary reports the kernel method"
 assert_contains "$summary" "Progress: 2/9 steps" "summary reports step progress"
-assert_contains "$summary" "Language: English" "summary reports the UI language"
-
-i18n_init ru
-CFG_UI_LANGUAGE=ru
-CFG_LOCALE=ru_RU.UTF-8
-wizard_update_summary
-summary=${UI_MENU_SUMMARY[*]}
-assert_contains "$summary" "Загрузка: UEFI" "summary is translated into Russian"
-assert_contains "$summary" "Язык: Русский" "Russian summary reports the UI language"
-i18n_init en
+assert_contains "$summary" "Locale: en_US.UTF-8" "summary reports the target locale"
 
 # Passwords are interactive-only: saving the configuration must not persist a
 # secret from the environment or the TUI state.
@@ -86,7 +74,7 @@ wizard_save
 config_text=$(<"$GI_CONFIG_FILE")
 assert_not_contains "$config_text" "top-secret-password" "config save never writes UI_SECRET"
 assert_not_contains "$config_text" "PASSWORD" "config save never writes a password key"
-assert_contains "$config_text" 'UI_LANGUAGE="en"' "config save persists the UI language"
+assert_not_contains "$config_text" "UI_LANGUAGE" "config save does not write the removed UI language"
 
 # ---------------------------------------------------------------------------
 # Explicit kernel and account choices
@@ -249,11 +237,8 @@ config_defaults
 GI_EASY_MODE=1
 wizard_system_rows
 system_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
-assert_not_contains "$system_rows" "Installer language" "easy mode hides the language row"
-GI_EASY_MODE=0
-wizard_system_rows
-system_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
-assert_contains "$system_rows" "Installer language" "advanced mode shows the language row"
+assert_contains "$system_rows" "Locale" "system page contains the target locale"
+assert_not_contains "$system_rows" "Installer language" "the interface language row is gone"
 
 GI_EASY_MODE=1
 wizard_build_rows

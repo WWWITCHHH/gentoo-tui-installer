@@ -7,7 +7,7 @@ PREFLIGHT_WARNED=0
 
 preflight_line() {
     local level=$1 message
-    message=$(i18n_text "$2")
+    message=$(text "$2")
     PREFLIGHT_LINES+=("${level}|${message}")
     case "$level" in
         fail) PREFLIGHT_FAILED=1 ;;

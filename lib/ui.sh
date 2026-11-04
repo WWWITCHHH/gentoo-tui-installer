@@ -88,7 +88,7 @@ ui_hr() {
 
 ui_wrap() {
     local text width=${2:-$(( $(ui_width) - 4 ))}
-    text=$(i18n_text "${1:-}")
+    text=$(text "${1:-}")
     printf '%s\n' "$text" | fold -s -w "$width" | sed 's/^/  /'
 }
 
@@ -106,8 +106,8 @@ ui_progress_bar() {
 
 ui_header() {
     local title subtitle title_color=${3:-} width progress line
-    title=$(i18n_text "${1:-}")
-    subtitle=$(i18n_text "${2:-}")
+    title=$(text "${1:-}")
+    subtitle=$(text "${2:-}")
     width=$(ui_width)
     printf -v line '%*s' "$((width - 2))" ''
     line=${line// /─}
@@ -152,7 +152,7 @@ ui_action_bar() {
 
 ui_footer() {
     local hint action_focus=${2:--1}
-    hint=$(i18n_text "${1:-↑/↓ — move · Enter — select · Esc — back}")
+    hint=$(text "${1:-↑/↓ — move · Enter — select · Esc — back}")
     printf '\n%s  %s%s\n' "$C_DIM" "$hint" "$C_RESET"
     ui_action_bar "$action_focus"
 }
@@ -248,15 +248,15 @@ ui_choice() {
     shift 4
     local -a items=("$@") tags=() labels=() notes=() marked=()
     local item tag label note i selected_index=-1
-    title=$(i18n_text "$title")
-    subtitle=$(i18n_text "$subtitle")
+    title=$(text "$title")
+    subtitle=$(text "$subtitle")
     for item in "${items[@]}"; do
         tag="" label="" note=""
         IFS='|' read -r tag label note <<<"$item"
         [[ -z $tag ]] && continue
         tags+=("$tag")
-        labels+=("$(i18n_text "$label")")
-        notes+=("$(i18n_text "$note")")
+        labels+=("$(text "$label")")
+        notes+=("$(text "$note")")
         marked+=(0)
     done
     ((${#tags[@]} > 0)) || die "ui_choice: no menu items"
@@ -466,8 +466,8 @@ ui_modal_confirm() {
     local confirm_label=${4:-$(T 'Confirm')} cancel_label=${5:-$(T 'Cancel')}
     local focus=0 key width inner border line i
     [[ $default == yes ]] && focus=1
-    title=$(i18n_text "$title")
-    body=$(i18n_text "$body")
+    title=$(text "$title")
+    body=$(text "$body")
     width=$(ui_width)
     ((width > 76)) && width=76
     inner=$((width - 6))
@@ -578,7 +578,7 @@ ui_show_file() {
     local title=$1 file=$2
     printf '%s\e[?25h\e[0m' "$C_RESET"
     ui_clear
-    printf '%s%s%s\n\n' "$C_BOLD$C_CYAN" "$(i18n_text "$title")" "$C_RESET"
+    printf '%s%s%s\n\n' "$C_BOLD$C_CYAN" "$(text "$title")" "$C_RESET"
     if command -v less >/dev/null 2>&1; then
         LESS=FRX less -R -- "$file" || true
     else
@@ -592,9 +592,9 @@ ui_show_file() {
 ui_input() {
     local title=$1 prompt=$2 default=$3 validator=${4:-} hint=${5:-} masked=${6:-no}
     local value=$default error="" display max_len key i
-    title=$(i18n_text "$title")
-    prompt=$(i18n_text "$prompt")
-    hint=$(i18n_text "$hint")
+    title=$(text "$title")
+    prompt=$(text "$prompt")
+    hint=$(text "$hint")
     UI_CANCELLED=0
     UI_RESULT=""
     while :; do
@@ -619,7 +619,7 @@ ui_input() {
         fi
         printf '\n'
         if [[ -n $error ]]; then
-            printf '\n  %s✖ %s%s\n' "$C_RED" "$(i18n_text "$error")" "$C_RESET"
+            printf '\n  %s✖ %s%s\n' "$C_RED" "$(text "$error")" "$C_RESET"
         fi
         ui_footer "$(T 'Enter — accept · Ctrl-U — clear · Esc — cancel')"
         if ! ui_read_key; then
@@ -755,12 +755,12 @@ ui_page_run() {
         fi
         for ((i = offset; i < page_end; i++)); do
             IFS='|' read -r tag label value note <<<"${rows[$i]}"
-            label=$(i18n_text "$label")
-            value=$(i18n_text "$value")
+            label=$(text "$label")
+            value=$(text "$value")
             if ((action < 0 && i == focus)); then
                 printf '  %s❯ %s:%s %s%s\n' "$C_CYAN$C_BOLD" "$label" "$C_RESET" "$C_BOLD$C_WHITE" "$value"
                 if [[ -n $note ]]; then
-                    printf '      %s%s%s\n' "$C_DIM" "$(i18n_text "$note")" "$C_RESET"
+                    printf '      %s%s%s\n' "$C_DIM" "$(text "$note")" "$C_RESET"
                 fi
             else
                 printf '    %s%s:%s %s\n' "$C_DIM" "$label" "$C_RESET" "$value"
@@ -771,7 +771,7 @@ ui_page_run() {
                 "$(T 'Showing %d–%d of %d' "$((offset + 1))" "$page_end" "${#rows[@]}")" "$C_RESET"
         fi
         if [[ -n $UI_PAGE_MESSAGE ]]; then
-            printf '\n  %s✖ %s%s\n' "$C_RED" "$(i18n_text "$UI_PAGE_MESSAGE")" "$C_RESET"
+            printf '\n  %s✖ %s%s\n' "$C_RED" "$(text "$UI_PAGE_MESSAGE")" "$C_RESET"
         fi
         ui_footer "$(T '↑/↓ — move · Enter — edit · Esc — back')" "$action"
         if ! ui_read_key; then

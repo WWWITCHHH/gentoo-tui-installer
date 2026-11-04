@@ -25,7 +25,7 @@ fi
 readonly GI_VERSION GI_GIT_VERSION
 
 # The TUI uses Unicode box drawing. A UTF-8 locale is required for correct
-# rendering; lib/i18n.sh picks the best available locale for the UI language.
+# rendering; pick the best available C/en_US UTF-8 locale.
 if locale -a 2>/dev/null | grep -qiE '^C\.utf-?8$'; then
     export LC_ALL=C.UTF-8
 elif locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
@@ -35,8 +35,8 @@ fi
 export TERM="${TERM:-linux}"
 umask 022
 
-# shellcheck source=lib/i18n.sh
-source "$GI_SCRIPT_DIR/lib/i18n.sh"
+# shellcheck source=lib/text.sh
+source "$GI_SCRIPT_DIR/lib/text.sh"
 # shellcheck source=lib/core.sh
 source "$GI_SCRIPT_DIR/lib/core.sh"
 # shellcheck source=lib/validate.sh

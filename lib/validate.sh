@@ -11,7 +11,7 @@ fail_validation() {
 
 validation_error() {
     local message
-    message=$(i18n_text "$*")
+    message=$(text "$*")
     VALIDATION_ERRORS+=("$message")
     log_warn "validation: $message"
 }
@@ -54,13 +54,6 @@ validate_locale() {
     [[ $locale =~ ^([a-z]{2,3}_[A-Z]{2}\.UTF-8(@[a-z0-9]+)?|C\.UTF-8)$ ]] ||
         fail_validation "Use a UTF-8 locale, for example ru_RU.UTF-8." || return 1
     return 0
-}
-
-validate_language() {
-    case "$1" in
-        en|ru) return 0 ;;
-        *) fail_validation "Language must be en or ru."; return 1 ;;
-    esac
 }
 
 validate_keymap() {
@@ -199,9 +192,6 @@ make_jobs_suggestion() {
 config_validate() {
     VALIDATION_ERRORS=()
     local flag disk_mib
-
-    validate_language "$CFG_UI_LANGUAGE" 2>/dev/null ||
-        validation_error "UI language: en or ru."
 
     [[ $CFG_BOOT_MODE == uefi || $CFG_BOOT_MODE == bios ]] ||
         validation_error "Boot mode: uefi or bios."

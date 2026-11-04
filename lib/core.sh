@@ -42,7 +42,7 @@ GI_CONFIG_EXISTED=0
 GI_NETWORK_FORCED=0
 
 CONFIG_KEYS=(
-    SCHEMA UI_LANGUAGE
+    SCHEMA
     BOOT_MODE DISK_MODE DISK ROOT_FS HOME_FS SWAP_MODE SWAP_MIB HOME_MODE HOME_MIB
     PART_ESP PART_BOOT PART_SWAP PART_ROOT PART_HOME
     FORMAT_ESP FORMAT_BOOT FORMAT_SWAP FORMAT_ROOT FORMAT_HOME
@@ -62,7 +62,7 @@ UI_SECRET=""
 UI_CANCELLED=0
 
 # Small fallback so modules that already call T can be sourced in isolation
-# (unit tests, helper scripts). lib/i18n.sh replaces these functions.
+# (unit tests, helper scripts). lib/text.sh replaces these functions.
 if ! declare -F T >/dev/null 2>&1; then
     T() {
         local fmt=$1 out
@@ -72,10 +72,10 @@ if ! declare -F T >/dev/null 2>&1; then
             printf -v out "$fmt" "$@"
             printf '%s' "$out"
         else
-            printf '%s' "$fmt"
+            printf '%b' "$fmt"
         fi
     }
-    i18n_text() { printf '%s' "${1:-}"; }
+    text() { printf '%s' "${1:-}"; }
 fi
 
 # ---------------------------------------------------------------------------
@@ -319,7 +319,6 @@ init_workdir() {
 
 config_defaults() {
     CFG_SCHEMA=1
-    CFG_UI_LANGUAGE=en
     if [[ -d /sys/firmware/efi ]]; then
         CFG_BOOT_MODE=uefi
     else
@@ -429,6 +428,10 @@ config_load() {
         fi
         key=${BASH_REMATCH[1]}
         raw=${BASH_REMATCH[2]}
+        if [[ $key == UI_LANGUAGE ]]; then
+            log_warn "ignoring obsolete UI_LANGUAGE configuration key"
+            continue
+        fi
         if ! config_key_valid "$key"; then
             die "$(T 'unknown or unsafe configuration key: %s' "$key")"
         fi

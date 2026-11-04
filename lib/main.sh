@@ -2,8 +2,6 @@
 # Entry point logic: CLI, resumes, step orchestration.
 
 GI_CONFIG_EXPLICIT=0
-GI_LANG_REQUEST=""
-GI_LANG_GIVEN=0
 
 main_usage() {
     cat <<EOF
@@ -13,7 +11,6 @@ Usage: gentoo-installer [options]
 
 Options:
   -c, --config FILE   use the specified configuration file
-      --lang LANG     interface language: en (default) or ru
   -r, --resume        continue from the saved state immediately
   -y, --yes           skip the destructive-action warning and the disk
                       confirmation (passwords and interactive questions remain)
@@ -42,16 +39,6 @@ main_parse_args() {
                 (($# >= 2)) || die "$(T 'option %s requires a file path' "$1")"
                 GI_CONFIG_FILE=$2
                 GI_CONFIG_EXPLICIT=1
-                shift
-                ;;
-            --lang)
-                (($# >= 2)) || die "$(T 'option %s requires a language (en or ru)' "$1")"
-                case "$2" in
-                    en|ru) ;;
-                    *) die "$(T 'unsupported language: %s (use en or ru)' "$2")" ;;
-                esac
-                GI_LANG_REQUEST=$2
-                GI_LANG_GIVEN=1
                 shift
                 ;;
             -r|--resume)
@@ -296,17 +283,6 @@ main() {
     fi
     GI_CONFIG_EXISTED=$config_existed
 
-    if ((GI_LANG_GIVEN)); then
-        CFG_UI_LANGUAGE=$GI_LANG_REQUEST
-    fi
-    case "${CFG_UI_LANGUAGE:-en}" in
-        en|ru) ;;
-        *)
-            warn "$(T 'Unknown UI language "%s"; using English.' "$CFG_UI_LANGUAGE")"
-            CFG_UI_LANGUAGE=en
-            ;;
-    esac
-    i18n_init "$CFG_UI_LANGUAGE"
     config_derived
     # A new installation gets a sensible VIDEO_CARDS default from the GPU that
     # is visible to the live environment. A loaded configuration keeps its
@@ -325,17 +301,6 @@ main() {
 
     trap main_on_signal INT TERM HUP
     ui_init
-
-    # First run without an explicit choice: ask for the interface language
-    # before showing the banner. Later changes are available in the main menu.
-    if ((!config_existed && !GI_LANG_GIVEN)); then
-        i18n_choose_language
-        config_derived
-        config_save
-    elif ((GI_LANG_GIVEN)); then
-        config_save
-    fi
-    log_info "UI language: $CFG_UI_LANGUAGE ($GI_UI_LOCALE)"
 
     main_banner
 
