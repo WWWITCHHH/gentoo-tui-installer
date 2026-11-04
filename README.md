@@ -1,7 +1,46 @@
 # Gentoo TUI Installer
 
+**English** | [Русский](#русский)
+
+## English
+
+A console installer for Gentoo Linux, intended to run from the **Gentoo Minimal
+Installation CD**. The interface is English-only and has no external
+`dialog`/`whiptail` dependency.
+
+Highlights:
+
+- settings-first flow: eight pages collect disk, system, build, kernel, users,
+  desktop, services and review settings, followed by one confirmation and an
+  unattended installation;
+- Easy and Advanced modes: Easy is the default and hides advanced settings;
+  Advanced exposes every option;
+- UEFI+GPT and BIOS+MBR, GRUB, OpenRC and systemd;
+- XFCE + LightDM, GNOME + GDM and KDE Plasma + SDDM;
+- kernels: `gentoo-kernel-bin`, `gentoo-kernel`, generated `gentoo-sources`
+  configuration, or manual `menuconfig`;
+- XFS, ext4 and Btrfs; LUKS, LVM, RAID, Secure Boot signing and dual boot are
+  not supported;
+- automatic `VIDEO_CARDS` detection and validation of contradictory settings.
+
+Quick start:
+
+```bash
+tar -xpf gentoo-tui-installer-1.9.0.tar.gz
+cd gentoo-tui-installer-1.9.0
+./gentoo-installer
+```
+
+The installer must run as root from the Minimal CD. Read
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/HANDBOOK.md](docs/HANDBOOK.md)
+and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before installing.
+
+---
+
+## Русский
+
 Консольный установщик Gentoo Linux для запуска из **Gentoo Minimal Installation CD**.
-Интерфейс по умолчанию английский; при первом запуске можно выбрать русский.
+Интерфейс только на английском.
 Код и комментарии — на английском. Установщик проводит пользователя по этапам
 официального [Gentoo AMD64 Handbook](https://wiki.gentoo.org/wiki/Handbook:AMD64)
 и не требует `dialog`, `whiptail` или других внешних TUI-библиотек.
@@ -24,9 +63,8 @@
   сборка, ядро, пользователи, графика, службы, проверка) собирают все параметры
   до начала работы. После одного итогового подтверждения установка идёт
   непрерывно, без вопросов между этапами.
-- Английский интерфейс по умолчанию и необязательный русский перевод. Язык
-  выбирается при первом запуске, параметром `--lang` или в главном меню. Для
-  русского интерфейса подбирается или генерируется UTF-8 locale.
+- Интерфейс только на английском. Отдельного выбора языка и русского перевода
+  больше нет.
 - UEFI + GPT (ESP в `/efi`) и BIOS + MBR (`/boot`), загрузчик GRUB.
 - Автоматическая разметка по схеме Handbook или ручное назначение существующих
   разделов.
@@ -60,7 +98,7 @@
   явным выбором «Продолжить всё равно». `--yes` пропускает только предупреждение
   и подтверждение диска.
 
-## Ограничения версии 1.8.0
+## Ограничения версии 1.9.0
 
 - Только **amd64/x86_64**.
 - Только **GRUB**. Другие загрузчики не поддерживаются.
@@ -87,8 +125,6 @@
 - Утилиты, входящие в Minimal CD: `parted`, `blkid`, `blockdev`, `lsblk`,
   `findmnt`, `mkfs.vfat`, `mkfs.ext4`, `mkswap`, `tar`, `xz`, `curl`, `gpg`
   (опционально).
-- Для русского интерфейса — `localedef` (входит в glibc), если локаль
-  `ru_RU.UTF-8` ещё не установлена в live-среде.
 - Для XFS и Btrfs — `xfsprogs` и `btrfs-progs`; установщик проверяет их наличие
   и отказывается продолжать, если выбранная ФС не поддерживается.
 
@@ -108,16 +144,15 @@
    установщик от root:
 
    ```bash
-   tar -xpf gentoo-tui-installer-1.8.0.tar.gz
-   cd gentoo-tui-installer-1.8.0
+   tar -xpf gentoo-tui-installer-1.9.0.tar.gz
+   cd gentoo-tui-installer-1.9.0
    ./gentoo-installer
    ```
 
    Установка в live-систему не обязательна. При желании можно выполнить
    `make install` (по умолчанию в `/usr/local`), но live-система эфемерна.
 
-3. При первом запуске выберите язык интерфейса: English (по умолчанию) или
-   Русский. Затем выберите «Настроить и установить» и последовательно заполните
+3. Выберите «Настроить и установить» и последовательно заполните
    восемь страниц: загрузка и диск, система, Stage3 и сборка, ядро,
    пользователи, графика, службы, проверка. На странице проверки подтвердите
    установку один раз — дальше установщик работает без вопросов. Пароли
@@ -143,7 +178,6 @@
 | Параметр | Описание |
 |---|---|
 | `-c, --config FILE` | Использовать указанный файл конфигурации. |
-| `--lang en\|ru` | Язык интерфейса: английский (по умолчанию) или русский. |
 | `-r, --resume` | Сразу продолжить установку с сохранённого состояния. |
 | `-y, --yes` | Не показывать предупреждение и не требовать подтверждения стирания диска. Пароли и остальные интерактивные вопросы остаются. |
 | `--debug` | Дублировать сообщения журнала в stderr. |
@@ -155,18 +189,11 @@
 При обычном запуске стирание диска и старт установки всегда требуют модального
 подтверждения.
 
-## Язык интерфейса и панель действий
+## Интерфейс и панель действий
 
-Английский — исходный и используемый по умолчанию язык. При первом запуске без
-сохранённой конфигурации установщик показывает выбор `English` / `Русский`;
-решение сохраняется в `UI_LANGUAGE` и используется при следующих запусках.
-Изменить язык можно в главном меню или параметром `--lang en|ru`.
-
-Для русского интерфейса установщик ищет `ru_RU.UTF-8`, при необходимости
-создаёт её через `localedef` и выставляет UTF-8 окружение. Это влияет только на
-интерфейс установщика; системная локаль целевой системы задаётся отдельно
-ключом `LOCALE`. Если русскую локаль создать не удалось, используется
-`C.UTF-8`, а кириллица всё равно отображается корректно.
+Интерфейс установщика только на английском. Выбора языка и русского перевода
+больше нет. Системная локаль целевой системы по-прежнему задаётся отдельно
+ключом `LOCALE` на странице «Система».
 
 Внизу каждого экрана отображается панель действий и подсказка:
 
@@ -201,7 +228,7 @@ default конфликтует с диском или прошивкой, соо
 | № | Страница | Что настраивается |
 |---:|---|---|
 | 1 | Загрузка и диск | UEFI + GPT или BIOS + MBR, автоматическая разметка или готовые разделы, целевой диск, файловые системы, swap и `/home`. |
-| 2 | Система | Hostname, timezone, locale, keymap, аппаратные часы и язык установщика. |
+| 2 | Система | Hostname, timezone, locale, keymap и аппаратные часы. |
 | 3 | Stage3 и сборка | Система инициализации OpenRC или systemd, зеркало, прямой URL, производный профиль Portage, `CPU_FLAGS_X86`, `@world`, `MAKEOPTS`, CFLAGS, USE. |
 | 4 | Ядро и загрузчик | Явный выбор бинарного, скомпилированного, автоматически сгенерированного или ручного ядра; linux-firmware, микрокод, cmdline, GRUB. |
 | 5 | Пользователи | Создавать ли обычного пользователя, имя, пароли root и пользователя, sudo. |
@@ -237,8 +264,8 @@ default конфликтует с диском или прошивкой, соо
   `/var/lib/gentoo-installer/gnupg`
 
 Каталог имеет права `0700`, конфигурация, состояние и журналы — `0600`.
-Пароли запрашиваются интерактивно и не сохраняются. Язык интерфейса хранится в
-ключе `UI_LANGUAGE` (`en` или `ru`). Полное описание ключей, формата файла и
+Пароли запрашиваются интерактивно и не сохраняются. Полное описание ключей,
+формата файла и
 примеры приведены в [docs/CONFIGURATION.md](docs/CONFIGURATION.md) и
 [conf/installer.conf.example](conf/installer.conf.example).
 

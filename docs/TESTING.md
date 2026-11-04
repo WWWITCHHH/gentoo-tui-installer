@@ -1,3 +1,19 @@
+# Testing / Тестирование
+
+**English** | [Русский](#русская-версия)
+
+## English
+
+`make check` runs syntax checks, ShellCheck and the unit suite; it needs no
+root privileges and does not touch block devices. The suite covers validation,
+configuration parsing, disk plans, Stage3, kernel helpers, the TUI text/action
+bar, desktop packages and the settings pages. A real VM installation is still
+required before production use. Russian details are below.
+
+---
+
+## Русская версия
+
 # Тестирование
 
 ## Что проверяется автоматически
@@ -20,12 +36,12 @@ make lint      # только ShellCheck
 | `tests/unit/test_disks.sh` | UEFI/BIOS-планы, swap и `/home`, отсутствие перекрытий, минимальный размер, BIOS > 2 TiB, NVMe-имена, `parted`-типы ФС, fallback-определение размера virtio-диска через `blockdev`/`lsblk`/sysfs. |
 | `tests/unit/test_kernel.sh` | удаление `root=`, `/etc/kernel/cmdline`, dracut config, `/etc/default/grub`, quoting одинарных кавычек, состав автоматического `.config` и список обязательных `CONFIG_*`. |
 | `tests/unit/test_ui.sh` | progress bar, перенос текста, валидатор целых чисел, панель действий `<Back>`/`<Next>`/`<Save>`/`<Help>`/`<Exit>`, сводка, декодирование стрелок/F1/F2/F10/Ctrl-S, серии стрелок и неизвестные escape-последовательности, маркеры `[ ]`/`[*]`/`( )`/`(*)`, окна выбора, модальное подтверждение, `ui_page_run` и отсутствие ожидания в unattended-режиме. |
-| `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля, сводка на английском и русском, отсутствие паролей в `install.conf`, пустой `KERNEL_MODE` по умолчанию, явный выбор ядра, требования к паролям, отсутствие секретов в тексте проверки, единственная настройка sudo, предупреждения в финальном подтверждении, Easy/Advanced defaults, скрытие строк, read-only `VIDEO_CARDS`, порядок страниц и принудительный NetworkManager для GNOME/KDE. |
-| `tests/unit/test_i18n.sh` | структура `ru.tsv`, перевод статических и printf-строк, сохранение подстановок, выбор/generation locale, первый выбор языка, панель действий и сводка. |
+| `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля, сводка, отсутствие паролей в `install.conf`, пустой `KERNEL_MODE` по умолчанию, явный выбор ядра, требования к паролям, отсутствие секретов в тексте проверки, единственная настройка sudo, предупреждения в финальном подтверждении, Easy/Advanced defaults, скрытие строк, read-only `VIDEO_CARDS`, порядок страниц и принудительный NetworkManager для GNOME/KDE. |
+| `tests/unit/test_text.sh` | английский `text`, `T` с `\n`, literal `%`, printf-подстановки и сохранение пробелов. |
 | `tests/unit/test_desktop.sh` | списки пакетов XFCE/GNOME/KDE, LightDM/GDM/SDDM, `gui-libs/display-manager-init` для OpenRC, профиль `desktop/plasma`, `/etc/conf.d/display-manager`, systemd-цель, группы пользователя, проверка установки, сетевое требование для незавершённого desktop-этапа, пропуск desktop-этапа при `DESKTOP=none` и autounmask-опции Portage. |
 | `tests/unit/test_config_example.sh` | все ключи `CONFIG_KEYS` присутствуют, нет дубликатов и паролей, пример загружается и даёт ожидаемые значения. |
 
-На момент 1.8.0 выполняется 561 assertions в 9 файлах. Число может меняться;
+На момент 1.9.0 выполняется 531 assertion в 9 файлах. Число может меняться;
 важен нулевой код возврата, а не точное количество.
 
 ### Harness
@@ -82,14 +98,13 @@ sudo apt-get install shellcheck
 
 ## Ручная проверка в виртуальной машине
 
-В версии 1.8.0 **нет автоматического интеграционного теста с реальной
+В версии 1.9.0 **нет автоматического интеграционного теста с реальной
 разметкой и загрузкой**. Перед использованием на физическом компьютере
 обязательно пройдите сценарий в VM.
 
 Для проверки KVM/QEMU используйте virtio-диск (`if=virtio`): установщик должен
-показать `/dev/vda` и его реальный размер, а не `0 MiB`. Дополнительно выберите
-русский язык в первом меню и убедитесь, что кириллица отображается без
-транслита, а нижняя панель и сводка остаются читаемыми.
+показать `/dev/vda` и его реальный размер, а не `0 MiB`. Убедитесь, что
+английский интерфейс, нижняя панель и сводка остаются читаемыми.
 
 ### Подготовка
 

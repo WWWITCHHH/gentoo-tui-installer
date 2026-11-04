@@ -1,10 +1,27 @@
-# Безопасность
+# Security / Безопасность
+
+**English** | [Русский](#русская-версия)
+
+## English
+
+Security fixes target the latest 1.x branch. The installer runs as root from a
+trusted Gentoo Minimal CD, modifies disks, verifies Stage3 with SHA256 and GPG,
+keeps passwords only in process memory, and requires explicit confirmation for
+destructive actions. It is not a hardened installer and does not configure
+LUKS, LVM, RAID or Secure Boot.
+
+Report vulnerabilities privately via GitHub Security Advisory or the project
+maintainer; do not publish secrets or exploits in a public issue.
+
+---
+
+## Русская версия
 
 ## Поддерживаемые версии
 
-Исправления безопасности выпускаются для последней ветки 1.x. Версия 1.8.0
-добавляет KDE Plasma + SDDM, исправляет профиль Plasma и принудительный
-NetworkManager для KDE; она не позиционируется как hardened-установщик.
+Исправления безопасности выпускаются для последней ветки 1.x. Версия 1.9.0
+удаляет русский интерфейс и оставляет английский как единственный язык TUI;
+она не позиционируется как hardened-установщик.
 
 ## Как сообщить об уязвимости
 

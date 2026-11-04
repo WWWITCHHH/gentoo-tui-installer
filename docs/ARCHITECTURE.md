@@ -1,3 +1,21 @@
+# Architecture / Архитектура
+
+**English** | [Русский](#русская-версия)
+
+## English
+
+The installer is a set of Bash modules for the Gentoo Minimal CD. It collects
+all settings first, validates them, asks for one final confirmation and then
+runs the installation stages unattended. The UI is English-only, uses no
+external dialog library and persists only non-secret configuration.
+
+The diagram and module descriptions below are in Russian; the source code and
+comments are in English.
+
+---
+
+## Русская версия
+
 # Архитектура
 
 ## Цели и ограничения
@@ -23,8 +41,7 @@ Bash выбран как компромисс: он гарантированно
 gentoo-installer          точка входа, выбор версии, загрузка модулей
 VERSION                   версия релиза
 lib/
-  i18n.sh                 язык интерфейса, каталог переводов, UTF-8 locale
-  lang/ru.tsv            русский каталог: English<TAB>перевод
+  text.sh                 форматирование английских строк и T
   core.sh                 константы, журнал, конфигурация, состояние, helpers
   validate.sh             валидаторы и config_validate
   ui.sh                   ANSI TUI, меню, ввод, панель действий, сводка
@@ -81,12 +98,11 @@ docs/                     документация
 
 ```text
 main()
- ├─ разбор CLI                  --lang, --config, --resume
+ ├─ разбор CLI                  --config, --resume
  ├─ проверка TTY и root
  ├─ init_workdir()             /var/lib/gentoo-installer, lock, журнал
  ├─ config_defaults()
  ├─ config_load()               если файл существует
- ├─ i18n_init()                 язык и UTF-8 locale
  ├─ config_derived()
  ├─ state_load()
  ├─ trap INT/TERM/HUP
@@ -218,24 +234,17 @@ disk → stage3 → portage → kernel → system → tools → bootloader → d
 - ввод пароля с двумя попытками;
 - отображение файла и длинного текста.
 
-## Локализация
+## Текст интерфейса
 
-Английский — исходный язык. `lib/i18n.sh` подключается до `core.sh` и
+Интерфейс только на английском. `lib/text.sh` подключается до `core.sh` и
 предоставляет:
 
-- `i18n_init en|ru` — выбор языка и UTF-8 locale;
-- `i18n_text` — точный перевод готовой статической строки (используется внутри
-  `ui_*`);
-- `T 'format %s' args` — перевод printf-формата с безопасной подстановкой
-  аргументов;
-- `i18n_choose_language` — первый выбор языка и сохранение `UI_LANGUAGE`.
+- `text` — возвращает готовую статическую строку без изменений;
+- `T 'format %s' args` — разворачивает `\n` и применяет printf-подстановки;
+  аргументы передаются как данные и не являются форматом.
 
-Каталог `lib/lang/ru.tsv` — две колонки через табуляцию. Загрузчик разворачивает
-`\n`/`\t`/`\\` через `printf '%b'`. Отсутствующий ключ возвращает английский
-текст; при `GI_I18N_DEBUG=1` пропуск пишется в журнал. Русская локаль
-`ru_RU.UTF-8` при необходимости создаётся через `localedef`; если это
-невозможно, используется `C.UTF-8`. `LC_ALL`/`LANG` меняются только для
-процесса установщика и не влияют на `LOCALE` целевой системы.
+Отдельного каталога переводов и выбора языка больше нет. Системная локаль
+целевой системы задаётся ключом `LOCALE` и не влияет на язык интерфейса.
 
 Ключевая деталь: `wizard_bool` вызывает `ui_confirm` с перенаправлением вывода
 TUI в stderr, а в stdout печатает только `yes` или `no`. Иначе command

@@ -1,8 +1,45 @@
-# Changelog
+# Changelog / История изменений
+
+**English** | [Русский](#русская-версия)
+
+## English
+
+All notable changes are documented here using
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+[Semantic Versioning](https://semver.org/). Release 1.9.0 makes the installer
+English-only and removes the Russian UI catalogue and language selection.
+The complete historical log is in the Russian section below.
+
+---
+
+## Русская версия
 
 Все заметные изменения проекта. Формат основан на
 [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии следуют
 [Semantic Versioning](https://semver.org/lang/ru/).
+
+## [1.9.0] - 2026-11-04
+
+### Удалено
+
+- Поддержка русского языка интерфейса: удалён каталог `lib/lang/ru.tsv`,
+  выбор языка, генерация `ru_RU.UTF-8`, ключ `UI_LANGUAGE` и параметр `--lang`.
+- Интерфейс теперь только на английском. Старые конфигурации с
+  `UI_LANGUAGE` загружаются, но ключ игнорируется.
+- `lib/i18n.sh` заменён небольшим `lib/text.sh` с английским `text` и `T`.
+
+### Изменено
+
+- Тесты `test_i18n.sh` заменены на `test_text.sh` (английский текст, `\n`,
+  literal `%` и printf-подстановки).
+- Документация обновлена: русская версия остаётся в git, для GitHub добавлены
+  двуязычные вводные разделы.
+- Системная локаль `LOCALE` по-прежнему настраивается отдельно и не связана с
+  языком интерфейса.
+
+### Тесты
+
+- 531 assertion в 9 файлах.
 
 ## [1.8.0] - 2026-11-04
 

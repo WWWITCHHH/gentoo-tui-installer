@@ -1,3 +1,19 @@
+# Gentoo Handbook / Соответствие Handbook
+
+**English** | [Русский](#русская-версия)
+
+## English
+
+This document maps the installer flow to the Gentoo AMD64 Handbook: media,
+partitioning, Stage3, Portage, kernel, system, services, bootloader, optional
+desktop and finalization. The installer follows the supported UEFI+GPT and
+BIOS+MBR paths; LUKS, LVM, RAID, Secure Boot signing and dual boot remain out
+of scope. The detailed Russian mapping is below.
+
+---
+
+## Русская версия
+
 # Соответствие Gentoo AMD64 Handbook
 
 Установщик реализует основной путь установки из
@@ -27,16 +43,11 @@ Minimal CD
 базовую систему загрузочной даже при сбое установки графики, а финальный
 `depclean` выполняется уже после неё и видит все установленные пакеты.
 
-## Интерфейс и язык
+## Интерфейс
 
-Английский — исходный и используемый по умолчанию язык интерфейса. При первом
-запуске установщик предлагает `English` или `Русский`; выбор сохраняется в
-`UI_LANGUAGE`. Язык можно сменить в главном меню или параметром `--lang en|ru`.
-
-Русские строки находятся в `lib/lang/ru.tsv`; отсутствующие записи откатываются
-к английскому. Для русского интерфейса установщик выбирает или генерирует
-UTF-8 locale `ru_RU.UTF-8`. Это касается только TUI: системная локаль целевой
-системы задаётся ключом `LOCALE` на этапе «Система».
+Интерфейс установщика только на английском. Выбора языка и русского перевода
+больше нет; строки интерфейса хранятся непосредственно в модулях. Системная
+локаль целевой системы задаётся ключом `LOCALE` на этапе «Система».
 
 Внизу каждого экрана находится панель действий `<Back>`, `<Next>`,
 `<Save>` (F2), `<Help>` (F1), `<Exit>` (F10) и подсказка по клавишам:

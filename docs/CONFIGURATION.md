@@ -1,3 +1,19 @@
+# Configuration / Конфигурация
+
+**English** | [Русский](#русская-версия)
+
+## English
+
+Configuration is a plain `KEY="value"` file, not a shell script. It is parsed
+without `source`, unknown keys are rejected (the obsolete `UI_LANGUAGE` key is
+ignored for compatibility), and passwords are never stored. `make.conf`,
+`fstab` and GRUB are generated from the validated values. The interface
+language is no longer configurable. The detailed key reference is in Russian below.
+
+---
+
+## Русская версия
+
 # Конфигурация
 
 ## Формат файла
@@ -65,7 +81,6 @@ DISK=""
 | Ключ | Допустимые значения | По умолчанию | Назначение |
 |---|---|---|---|
 | `SCHEMA` | `1` | `1` | Версия формата конфигурации. |
-| `UI_LANGUAGE` | `en`, `ru` | `en` | Язык интерфейса установщика. |
 | `BOOT_MODE` | `uefi`, `bios` | по режиму live-среды | Схема загрузки и таблица разделов. |
 | `DISK_MODE` | `auto`, `manual` | `auto` | Создавать разделы или использовать существующие. |
 | `DISK` | путь к блочному устройству | пусто | Целевой диск, например `/dev/nvme0n1`. |
@@ -77,18 +92,9 @@ DISK=""
 | `HOME_MIB` | целое > 0 | `0` | Размер `/home`; нужен при `separate` в auto-режиме. |
 | `BOOT_FS` | `xfs`, `ext4`, `btrfs` | `xfs` | ФС `/boot` в BIOS-режиме. |
 
-`UI_LANGUAGE` управляет только языком установщика. Английский (`en`) — исходный
-и используемый по умолчанию; русский (`ru`) загружает каталог
-`lib/lang/ru.tsv`. При первом запуске без файла конфигурации мастер предлагает
-выбрать язык и сохраняет ответ в этом ключе. Параметр `--lang en|ru`
-переопределяет значение для текущего запуска и сохраняет его; смена языка
-доступна и в главном меню.
-
-Для русского интерфейса установщик выставляет UTF-8 locale (`ru_RU.UTF-8`),
-создавая её через `localedef` при необходимости. Это не меняет системную
-локаль целевой системы: за неё отвечает отдельный ключ `LOCALE`. Если русскую
-локаль создать не удалось, используется `C.UTF-8`; каталог перевода при этом
-продолжает работать.
+Интерфейс установщика только на английском. Ключа `UI_LANGUAGE` больше нет;
+старые файлы с этим ключом загружаются, но ключ игнорируется. Системная локаль
+целевой системы задаётся отдельным ключом `LOCALE`.
 
 ### Ручные разделы
 
@@ -291,7 +297,6 @@ dhcpcd.
 
 ```text
 SCHEMA="1"
-UI_LANGUAGE="en"
 BOOT_MODE="uefi"
 DISK_MODE="auto"
 DISK="/dev/nvme0n1"
@@ -316,7 +321,6 @@ CREATE_USER="yes"
 
 ```text
 SCHEMA="1"
-UI_LANGUAGE="ru"
 BOOT_MODE="bios"
 BOOT_FS="ext4"
 DISK_MODE="auto"
@@ -339,7 +343,6 @@ NETWORK="networkmanager"
 
 ```text
 SCHEMA="1"
-UI_LANGUAGE="en"
 BOOT_MODE="uefi"
 DISK_MODE="manual"
 DISK="/dev/sda"
@@ -368,7 +371,6 @@ HOME_MODE="separate"
 - BIOS + MBR запрещён для дисков > 2 TiB;
 - ручные разделы должны существовать, быть уникальными и на одном диске;
 - preflight требует `mkfs.xfs`/`mkfs.btrfs`, если выбраны эти ФС;
-- `UI_LANGUAGE` — `en` или `ru`;
 - hostname, timezone, locale, keymap, CFLAGS, USE, VIDEO_CARDS и kernel cmdline
   проходят собственные валидаторы;
 - `DESKTOP` — `none`, `xfce` или `gnome`;
