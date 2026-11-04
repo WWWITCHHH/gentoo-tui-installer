@@ -60,7 +60,7 @@
   явным выбором «Продолжить всё равно». `--yes` пропускает только предупреждение
   и подтверждение диска.
 
-## Ограничения версии 1.6.0
+## Ограничения версии 1.6.1
 
 - Только **amd64/x86_64**.
 - Только **GRUB**. Другие загрузчики не поддерживаются.
@@ -108,8 +108,8 @@
    установщик от root:
 
    ```bash
-   tar -xpf gentoo-tui-installer-1.6.0.tar.gz
-   cd gentoo-tui-installer-1.6.0
+   tar -xpf gentoo-tui-installer-1.6.1.tar.gz
+   cd gentoo-tui-installer-1.6.1
    ./gentoo-installer
    ```
 

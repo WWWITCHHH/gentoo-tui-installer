@@ -4,6 +4,31 @@
 [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии следуют
 [Semantic Versioning](https://semver.org/lang/ru/).
 
+## [1.6.1] - 2026-11-04
+
+### Исправлено
+
+- Установка XFCE больше не падает на сообщении Portage «The following USE
+  changes are necessary to proceed». Все неинтерактивные вызовы `emerge`
+  теперь используют `--autounmask-write=y --autounmask-continue=y`, поэтому
+  необходимые USE-изменения записываются и установка продолжается без
+  `dispatch-conf`/`etc-update`.
+- Автоопределение `VIDEO_CARDS` для QEMU QXL: QXL имеет PCI ID
+  `1b36:0100`/`1b36:0101`, а `1234:1111` — это QEMU/Bochs stdvga. QXL теперь
+  определяется автоматически; stdvga использует modesetting.
+- Добавлено определение ASPEED (`1a03` → `ast`) и Matrox (`102b` → `mga`).
+
+### Изменено
+
+- Новости Portage («25 news items need reading») остаются информационным
+  сообщением и не являются причиной сбоя.
+- Тесты дополнены проверками autounmask-опций и PCI ID для QXL/stdvga/ASPEED/
+  Matrox.
+
+### Тесты
+
+- 512 assertions в 9 файлах.
+
 ## [1.6.0] - 2026-10-31
 
 ### Добавлено
