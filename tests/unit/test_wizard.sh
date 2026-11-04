@@ -150,6 +150,10 @@ services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
 assert_not_contains "$services_rows" "Install sudo" "services page has no duplicate sudo setting"
 assert_contains "$services_rows" "Network" "services page still lists the network"
 
+expected_pages=(disk system build kernel users desktop services review)
+assert_eq "${expected_pages[*]}" "${WIZARD_PAGES[*]}" \
+    "desktop page precedes services so it can force the network stack"
+
 # ---------------------------------------------------------------------------
 # Easy and Advanced modes
 # ---------------------------------------------------------------------------
@@ -294,6 +298,26 @@ GI_EASY_MODE=1
 CFG_VIDEO_CARDS=intel
 assert_ok "easy mode refuses to edit a detected VIDEO_CARDS" wizard_desktop_edit video
 assert_eq "VIDEO_CARDS" "$MODE_MESSAGE" "read-only VIDEO_CARDS shows an explanation"
+
+# GNOME forces NetworkManager, and the Services page reflects the lock.
+config_defaults
+CFG_DESKTOP=gnome
+config_derived
+assert_eq "networkmanager" "$CFG_NETWORK" "GNOME forces NetworkManager before Services"
+wizard_services_rows
+services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$services_rows" "Forced to NetworkManager" \
+    "Services marks the forced GNOME network stack"
+MODE_MESSAGE=""
+assert_ok "GNOME network setting is read-only" wizard_services_edit network
+assert_eq "Network configuration" "$MODE_MESSAGE" "forced network explains why it cannot change"
+CFG_DESKTOP=xfce
+config_derived
+assert_eq "dhcpcd" "$CFG_NETWORK" "leaving GNOME restores dhcpcd"
+wizard_services_rows
+services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_not_contains "$services_rows" "Forced to NetworkManager" \
+    "Services unlocks the network after leaving GNOME"
 
 # The final confirmation must show consistency warnings and use an explicit
 # "Continue anyway" label when the configuration is suspicious.

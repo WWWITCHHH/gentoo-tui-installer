@@ -738,15 +738,20 @@ wizard_page_users() {
 # Services page -------------------------------------------------------------
 
 wizard_services_rows() {
-    local optional=""
+    local optional="" network_note
     [[ $CFG_SSH == yes ]] && optional+="SSH "
     [[ $CFG_CRON == yes ]] && optional+="cron "
     [[ $CFG_CHRONY == yes ]] && optional+="chrony "
     [[ $CFG_SYSLOG == yes ]] && optional+="syslog "
     optional=${optional% }
     [[ -n $optional ]] || optional=$(T 'none')
+    if [[ $CFG_DESKTOP == gnome ]]; then
+        network_note=$(T 'Forced to NetworkManager by GNOME')
+    else
+        network_note=$(T 'dhcpcd, NetworkManager or no configuration')
+    fi
     UI_PAGE_ROWS=(
-        "network|$(T 'Network')|$CFG_NETWORK|$(T 'dhcpcd, NetworkManager or no configuration')"
+        "network|$(T 'Network')|$CFG_NETWORK|$network_note"
         "optional|$(T 'Optional services')|$optional|$(T 'Space toggles SSH, cron, chrony and syslog')"
     )
 }
@@ -755,6 +760,11 @@ wizard_services_edit() {
     local tag=$1 default=""
     case "$tag" in
         network)
+            if [[ $CFG_DESKTOP == gnome ]]; then
+                ui_msg "$(T 'Network configuration')" \
+                    "$(T 'GNOME requires NetworkManager; this setting is forced and cannot be changed.')" || true
+                return 0
+            fi
             wizard_pick CFG_NETWORK "$(T 'Network configuration')" \
                 "$(T 'Automatic configuration over DHCP')" "$CFG_NETWORK" \
                 "dhcpcd|dhcpcd|$(T 'Simple DHCP client')" \
@@ -1000,7 +1010,7 @@ wizard_page_review() {
 
 # Setup sequence ------------------------------------------------------------
 
-WIZARD_PAGES=(disk system build kernel users services desktop review)
+WIZARD_PAGES=(disk system build kernel users desktop services review)
 
 wizard_run_setup() {
     local i=0 rc=0 page
@@ -1178,6 +1188,7 @@ wizard_load_config() {
             ;;
     esac
     i18n_init "$CFG_UI_LANGUAGE"
+    GI_NETWORK_FORCED=0
     config_derived
     # Secrets belong to one process and are never part of a configuration file.
     GI_ROOT_PASSWORD=""

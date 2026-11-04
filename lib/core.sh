@@ -39,6 +39,7 @@ GI_USER_PASSWORD=""
 GI_EASY_MODE=1
 GI_MODE_DEFAULTS_APPLIED=0
 GI_CONFIG_EXISTED=0
+GI_NETWORK_FORCED=0
 
 CONFIG_KEYS=(
     SCHEMA UI_LANGUAGE
@@ -549,6 +550,16 @@ config_derived() {
             fi
             ;;
     esac
+    # GNOME's profile enables NetworkManager integration, so keep the target
+    # network stack consistent. The forced flag lets us restore dhcpcd when the
+    # user goes back and selects XFCE or no desktop.
+    if [[ ${CFG_DESKTOP:-none} == gnome ]]; then
+        CFG_NETWORK=networkmanager
+        GI_NETWORK_FORCED=1
+    elif ((GI_NETWORK_FORCED)); then
+        CFG_NETWORK=dhcpcd
+        GI_NETWORK_FORCED=0
+    fi
     if [[ $CFG_SWAP_MODE != custom ]]; then
         CFG_SWAP_MIB=0
     fi

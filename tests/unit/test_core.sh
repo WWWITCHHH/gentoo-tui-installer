@@ -83,6 +83,24 @@ config_derived
 assert_eq "desktop-openrc" "$CFG_STAGE_FLAVOR" "desktop Stage3 is preserved without a desktop"
 assert_eq "desktop" "$CFG_PROFILE" "desktop Stage3 still selects the desktop profile"
 
+# GNOME forces NetworkManager; leaving GNOME restores dhcpcd.
+config_defaults
+CFG_DESKTOP=gnome
+CFG_NETWORK=dhcpcd
+config_derived
+assert_eq "networkmanager" "$CFG_NETWORK" "GNOME forces NetworkManager"
+CFG_DESKTOP=xfce
+config_derived
+assert_eq "dhcpcd" "$CFG_NETWORK" "leaving GNOME restores dhcpcd"
+assert_eq "0" "$GI_NETWORK_FORCED" "leaving GNOME clears the forced flag"
+CFG_NETWORK=networkmanager
+config_derived
+assert_eq "networkmanager" "$CFG_NETWORK" "an explicit choice after leaving GNOME is preserved"
+CFG_DESKTOP=none
+CFG_NETWORK=none
+config_derived
+assert_eq "none" "$CFG_NETWORK" "an explicit no-network choice is preserved"
+
 # GPU detection maps the common PCI vendors to VIDEO_CARDS values.
 drm_root=$(mktemp -d "${TMPDIR:-/tmp}/gi-drm.XXXXXX")
 make_drm_card() {
