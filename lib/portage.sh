@@ -3,6 +3,22 @@
 
 PORTAGE_CPU_FLAGS=""
 
+# Portage refuses to start when a dependency needs a USE flag change unless it
+# is allowed to write the proposal. Continue automatically so the unattended
+# installation does not stop at "The following USE changes are necessary".
+PORTAGE_EMERGE_OPTS=(
+    --ask=n
+    --quiet
+    --autounmask-write=y
+    --autounmask-continue=y
+)
+
+portage_emerge() {
+    local label=$1
+    shift
+    chroot_run "$label" emerge "${PORTAGE_EMERGE_OPTS[@]}" "$@" || return 1
+}
+
 root_path() {
     printf '%s%s' "$GI_ROOT" "$1"
 }
@@ -140,8 +156,7 @@ portage_sync() {
 portage_detect_cpu_flags() {
     local output flags
     [[ $CFG_CPU_FLAGS == yes ]] || return 0
-    ui_run "$(T 'Installing cpuid2cpuflags')" \
-        env LC_ALL=C LANG=C chroot "$GI_ROOT" /bin/bash -lc 'emerge --ask=n --quiet app-portage/cpuid2cpuflags' || return 1
+    portage_emerge "$(T 'Installing cpuid2cpuflags')" app-portage/cpuid2cpuflags || return 1
     output=$(chroot_capture cpuid2cpuflags)
     flags=$(printf '%s\n' "$output" | sed -n 's/^CPU_FLAGS_X86:[[:space:]]*//p' | head -n 1)
     if [[ -z $flags ]]; then
@@ -201,8 +216,7 @@ portage_select_profile() {
 
 portage_update_world() {
     [[ $CFG_UPDATE_WORLD == yes ]] || return 0
-    chroot_run "$(T 'Updating @world')" \
-        emerge --ask=n --update --deep --newuse @world || return 1
+    portage_emerge "$(T 'Updating @world')" --update --deep --newuse @world || return 1
     chroot_run "$(T 'Updating the environment')" env-update || return 1
     log_info "world updated"
 }

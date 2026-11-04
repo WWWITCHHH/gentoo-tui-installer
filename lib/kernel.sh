@@ -41,14 +41,14 @@ kernel_cpu_vendor() {
 }
 
 kernel_install_initramfs_tools() {
-    chroot_run "$(T 'Installing installkernel and dracut')" \
-        emerge --ask=n --quiet sys-kernel/installkernel sys-kernel/dracut || return 1
+    portage_emerge "$(T 'Installing installkernel and dracut')" \
+        sys-kernel/installkernel sys-kernel/dracut || return 1
 }
 
 kernel_install_firmware() {
     [[ $CFG_FIRMWARE == yes ]] || return 0
-    chroot_run "$(T 'Installing linux-firmware')" \
-        emerge --ask=n --quiet sys-kernel/linux-firmware || return 1
+    portage_emerge "$(T 'Installing linux-firmware')" \
+        sys-kernel/linux-firmware || return 1
 }
 
 kernel_install_microcode() {
@@ -68,7 +68,7 @@ kernel_install_microcode() {
             return 0
             ;;
     esac
-    chroot_run "$(T 'Installing microcode (%s)' "$mode")" emerge --ask=n --quiet "$package" || return 1
+    portage_emerge "$(T 'Installing microcode (%s)' "$mode")" "$package" || return 1
 }
 
 kernel_verify() {
@@ -103,24 +103,24 @@ kernel_verify() {
 }
 
 kernel_install_binary() {
-    chroot_run "$(T 'Installing gentoo-kernel-bin')" \
-        emerge --ask=n --quiet sys-kernel/gentoo-kernel-bin || return 1
+    portage_emerge "$(T 'Installing gentoo-kernel-bin')" \
+        sys-kernel/gentoo-kernel-bin || return 1
 }
 
 kernel_install_distribution() {
-    chroot_run "$(T 'Building gentoo-kernel')" \
-        emerge --ask=n --quiet sys-kernel/gentoo-kernel || return 1
+    portage_emerge "$(T 'Building gentoo-kernel')" \
+        sys-kernel/gentoo-kernel || return 1
 }
 
 kernel_install_build_dependencies() {
-    chroot_run "$(T 'Installing kernel build dependencies')" \
-        emerge --ask=n --quiet sys-devel/bc sys-devel/flex sys-devel/bison \
+    portage_emerge "$(T 'Installing kernel build dependencies')" \
+        sys-devel/bc sys-devel/flex sys-devel/bison \
         dev-libs/elfutils sys-libs/ncurses dev-util/pahole dev-libs/openssl || return 1
 }
 
 kernel_install_sources() {
-    chroot_run "$(T 'Installing kernel sources')" \
-        emerge --ask=n --quiet sys-kernel/gentoo-sources || return 1
+    portage_emerge "$(T 'Installing kernel sources')" \
+        sys-kernel/gentoo-sources || return 1
     chroot_run "$(T 'Selecting kernel sources')" eselect kernel set 1 || return 1
 }
 

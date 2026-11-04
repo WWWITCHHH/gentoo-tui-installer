@@ -12,6 +12,10 @@ config_defaults
 config_derived
 assert_eq "none" "$CFG_DESKTOP" "desktop defaults to none"
 assert_fail "desktop disabled" desktop_is_enabled
+assert_contains "${PORTAGE_EMERGE_OPTS[*]}" "--autounmask-write=y" \
+    "emerge is allowed to write USE proposals"
+assert_contains "${PORTAGE_EMERGE_OPTS[*]}" "--autounmask-continue=y" \
+    "emerge continues after autounmask changes"
 
 CFG_DESKTOP=xfce
 assert_ok "desktop enabled" desktop_is_enabled

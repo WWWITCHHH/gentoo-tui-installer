@@ -139,8 +139,7 @@ desktop_install_packages() {
     local -a packages=()
     mapfile -t packages < <(desktop_packages)
     ((${#packages[@]})) || return 0
-    chroot_run "$(T 'Installing %s' "$CFG_DESKTOP")" \
-        emerge --ask=n --quiet "${packages[@]}" || return 1
+    portage_emerge "$(T 'Installing %s' "$CFG_DESKTOP")" "${packages[@]}" || return 1
     return 0
 }
 

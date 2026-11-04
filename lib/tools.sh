@@ -67,8 +67,7 @@ step_tools() {
         packages+=(app-admin/sudo)
     fi
 
-    chroot_run "$(T 'Installing system services and utilities')" \
-        emerge --ask=n --quiet "${packages[@]}" || return 1
+    portage_emerge "$(T 'Installing system services and utilities')" "${packages[@]}" || return 1
 
     service=$(tools_network_service)
     if [[ -n $service ]]; then

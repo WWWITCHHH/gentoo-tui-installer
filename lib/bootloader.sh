@@ -25,7 +25,7 @@ bootloader_install_grub() {
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         packages+=(sys-boot/efibootmgr)
     fi
-    chroot_run "$(T 'Installing GRUB')" emerge --ask=n --quiet "${packages[@]}" || return 1
+    portage_emerge "$(T 'Installing GRUB')" "${packages[@]}" || return 1
 
     if [[ $CFG_BOOT_MODE == uefi ]]; then
         is_mounted "$GI_ROOT/efi" || {
