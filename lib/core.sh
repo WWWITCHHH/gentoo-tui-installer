@@ -537,9 +537,9 @@ config_derived() {
         CFG_PROFILE=desktop
     fi
     # Keep the Portage profile consistent with the desktop environment choice
-    # while preserving explicit KDE and hardened profiles. GNOME also replaces
-    # the generic desktop profile because GDM requires elogind/systemd USE flags
-    # that the GNOME profile enables.
+    # while preserving an explicit hardened profile. GNOME and KDE replace the
+    # generic desktop profile because GDM/SDDM require elogind/systemd USE flags
+    # that their profiles enable.
     case "$CFG_DESKTOP" in
         xfce)
             [[ $CFG_PROFILE == stage ]] && CFG_PROFILE=desktop
@@ -549,11 +549,16 @@ config_derived() {
                 CFG_PROFILE=gnome
             fi
             ;;
+        kde)
+            if [[ $CFG_PROFILE == stage || $CFG_PROFILE == desktop ]]; then
+                CFG_PROFILE=kde
+            fi
+            ;;
     esac
-    # GNOME's profile enables NetworkManager integration, so keep the target
-    # network stack consistent. The forced flag lets us restore dhcpcd when the
-    # user goes back and selects XFCE or no desktop.
-    if [[ ${CFG_DESKTOP:-none} == gnome ]]; then
+    # GNOME and KDE enable NetworkManager integration in their profiles, so
+    # keep the target network stack consistent. The forced flag lets us restore
+    # dhcpcd when the user goes back and selects XFCE or no desktop.
+    if [[ ${CFG_DESKTOP:-none} == gnome || ${CFG_DESKTOP:-none} == kde ]]; then
         CFG_NETWORK=networkmanager
         GI_NETWORK_FORCED=1
     elif ((GI_NETWORK_FORCED)); then

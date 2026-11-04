@@ -942,3 +942,11 @@ Detected automatically. Switch to Advanced mode to change it.	Определен
 Gentoo Linux installer with a console interface.\\n\\nSupported: UEFI+GPT and BIOS+MBR, OpenRC and systemd,\\nbinary, compiled, automatic and manual kernels, GRUB,\\noptional XFCE + LightDM and GNOME + GDM,\\nEasy and Advanced configuration modes.\\nNot supported: LUKS, LVM, RAID, Secure Boot signing and dual boot.\\n\\nThis project is distributed under the MIT license.\\nLogs: %s\\nState: %s	Установщик Gentoo Linux с консольным интерфейсом.\n\nПоддерживается: UEFI+GPT и BIOS+MBR, OpenRC и systemd,\nбинарное, скомпилированное, автоматическое и ручное ядро, GRUB,\nнеобязательные XFCE + LightDM и GNOME + GDM,\nрежимы настройки Easy и Advanced.\nНе поддерживается: LUKS, LVM, RAID, подпись Secure Boot и dual boot.\n\nПроект распространяется по лицензии MIT.\nЖурналы: %s\nСостояние: %s
 Forced to NetworkManager by GNOME	Принудительно NetworkManager для GNOME
 GNOME requires NetworkManager; this setting is forced and cannot be changed.	GNOME требует NetworkManager; эта настройка принудительная и не может быть изменена.
+KDE Plasma	KDE Plasma
+KDE Plasma + SDDM	KDE Plasma + SDDM
+Full Plasma desktop; many packages	Полноценный рабочий стол Plasma; много пакетов
+KDE Plasma uses SDDM and requires a lot of space; installation may take several hours.	KDE Plasma использует SDDM и требует много места; установка может занять несколько часов.
+An explicit choice: no desktop, XFCE, GNOME or KDE Plasma	Явный выбор: без графики, XFCE, GNOME или KDE Plasma
+Forced to NetworkManager by the selected desktop	Принудительно NetworkManager для выбранного окружения
+GNOME and KDE require NetworkManager; this setting is forced and cannot be changed.	GNOME и KDE требуют NetworkManager; эта настройка принудительная и не может быть изменена.
+The KDE Portage profile is selected, but the desktop environment is %s.	Выбран профиль Portage KDE, но графическое окружение: %s.

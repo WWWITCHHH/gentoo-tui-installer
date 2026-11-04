@@ -397,7 +397,9 @@ config_check_consistency() {
                 fi
                 ;;
             kde)
-                CONFIG_WARNINGS+=("$(T 'The KDE Portage profile is selected, but this installer only configures XFCE or GNOME.')")
+                if [[ $CFG_DESKTOP != kde ]]; then
+                    CONFIG_WARNINGS+=("$(T 'The KDE Portage profile is selected, but the desktop environment is %s.' "$CFG_DESKTOP")")
+                fi
                 ;;
             hardened)
                 CONFIG_WARNINGS+=("$(T 'The hardened profile with a desktop environment may need manual USE adjustments.')")

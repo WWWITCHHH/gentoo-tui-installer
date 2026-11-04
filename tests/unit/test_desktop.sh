@@ -48,6 +48,34 @@ assert_contains "$gnome_systemd" "sys-apps/dbus" "systemd desktop still needs db
 assert_not_contains "$gnome_systemd" "sys-auth/elogind" "systemd does not need elogind"
 assert_not_contains "$gnome_systemd" "gui-libs/display-manager-init" "systemd does not need the OpenRC display-manager wrapper"
 
+CFG_DESKTOP=kde
+CFG_INIT=openrc
+assert_eq "KDE Plasma" "$(desktop_label)"
+assert_eq "sddm" "$(desktop_display_manager)"
+kde_openrc=$(desktop_packages)
+assert_contains "$kde_openrc" "kde-plasma/plasma-meta" "KDE plasma meta package"
+assert_contains "$kde_openrc" "gui-apps/sddm" "KDE uses SDDM"
+assert_contains "$kde_openrc" "sys-auth/elogind" "OpenRC KDE needs elogind"
+assert_contains "$kde_openrc" "gui-libs/display-manager-init" "OpenRC KDE needs the display-manager init script"
+
+CFG_INIT=systemd
+kde_systemd=$(desktop_packages)
+assert_contains "$kde_systemd" "kde-plasma/plasma-meta"
+assert_contains "$kde_systemd" "gui-apps/sddm"
+assert_not_contains "$kde_systemd" "sys-auth/elogind" "systemd KDE does not need elogind"
+assert_not_contains "$kde_systemd" "gui-libs/display-manager-init" "systemd KDE does not need the OpenRC display-manager wrapper"
+
+# The KDE profile is the Plasma profile in the current tree.
+CFG_PROFILE=kde
+CFG_INIT=systemd
+pattern=$(portage_profile_pattern)
+[[ "default/linux/amd64/23.0/desktop/plasma/systemd" =~ $pattern ]] && result=yes || result=no
+assert_eq "yes" "$result" "KDE systemd matches desktop/plasma/systemd"
+CFG_INIT=openrc
+pattern=$(portage_profile_pattern)
+[[ "default/linux/amd64/23.0/desktop/plasma" =~ $pattern ]] && result=yes || result=no
+assert_eq "yes" "$result" "KDE OpenRC matches desktop/plasma"
+
 CFG_DESKTOP=none
 assert_eq "" "$(desktop_display_manager)" "no display manager without desktop"
 assert_eq "" "$(desktop_packages)" "no packages without desktop"
@@ -71,6 +99,18 @@ CFG_INIT=systemd
 portage_write_make_conf
 make_conf=$(<"$GI_ROOT/etc/portage/make.conf")
 assert_not_contains "$make_conf" "elogind" "systemd desktop does not add elogind USE"
+
+# plasma-meta firewall integration is systemd-only.
+GI_ROOT="${GI_TEST_TMP}/package-use-root"
+rm -rf -- "$GI_ROOT"
+mkdir -p "$GI_ROOT/etc/portage"
+CFG_DESKTOP=kde
+CFG_INIT=openrc
+portage_write_package_use
+assert_contains "$(<"$GI_ROOT/etc/portage/package.use/installer")"     "kde-plasma/plasma-meta -firewall" "OpenRC KDE disables the systemd-only firewall KCM"
+CFG_INIT=systemd
+portage_write_package_use
+assert_not_contains "$(<"$GI_ROOT/etc/portage/package.use/installer")"     "plasma-meta -firewall" "systemd KDE keeps the firewall KCM"
 
 # OpenRC display-manager configuration and enablement.
 GI_ROOT="${GI_TEST_TMP}/desktop-root"
@@ -97,6 +137,22 @@ assert_ok "enable GDM on systemd" desktop_write_display_manager
 log=$(<"${GI_TEST_TMP}/chroot.log")
 assert_contains "$log" "systemctl enable gdm.service" "GDM service enabled"
 assert_contains "$log" "systemctl set-default graphical.target" "graphical target selected"
+
+: >"${GI_TEST_TMP}/chroot.log"
+CFG_DESKTOP=kde
+CFG_INIT=openrc
+assert_ok "write SDDM display-manager config" desktop_write_display_manager
+conf=$(<"$GI_ROOT/etc/conf.d/display-manager")
+assert_contains "$conf" 'DISPLAYMANAGER="sddm"' "display-manager selects SDDM"
+assert_contains "$(<"${GI_TEST_TMP}/chroot.log")" \
+    "rc-update add display-manager default" "display-manager starts SDDM on OpenRC"
+
+: >"${GI_TEST_TMP}/chroot.log"
+CFG_DESKTOP=kde
+CFG_INIT=systemd
+assert_ok "enable SDDM on systemd" desktop_write_display_manager
+log=$(<"${GI_TEST_TMP}/chroot.log")
+assert_contains "$log" "systemctl enable sddm.service" "SDDM service enabled"
 
 # OpenRC services are enabled with the right runlevels.
 : >"$GI_ROOT/etc/init.d/dbus"
@@ -140,6 +196,14 @@ CFG_INIT=systemd
 assert_ok "verify GNOME installation" desktop_verify
 rm -f -- "$GI_ROOT/usr/sbin/gdm"
 assert_fail "verify missing GDM" desktop_verify
+
+: >"$GI_ROOT/usr/bin/startplasma-x11"
+: >"$GI_ROOT/usr/bin/sddm"
+CFG_DESKTOP=kde
+CFG_INIT=openrc
+assert_ok "verify KDE installation" desktop_verify
+rm -f -- "$GI_ROOT/usr/bin/startplasma-x11"
+assert_fail "verify missing KDE session" desktop_verify
 
 # Network is required while a selected desktop step is still pending.
 curl() { return 1; }

@@ -141,10 +141,16 @@ portage_write_make_conf() {
 portage_write_package_use() {
     local dir="$GI_ROOT/etc/portage/package.use"
     ensure_dir "$dir"
-    write_file_atomic "$dir/installer" 0644 <<'EOF'
-# Installkernel builds an initramfs with dracut for every installed kernel.
-sys-kernel/installkernel dracut
-EOF
+    {
+        printf '# Installkernel builds an initramfs with dracut for every installed kernel.\n'
+        printf 'sys-kernel/installkernel dracut\n'
+        if [[ $CFG_DESKTOP == kde && $CFG_INIT == openrc ]]; then
+            # plasma-meta[firewall] is only supported with systemd. On OpenRC
+            # disable the firewall KCM instead of leaving a REQUIRED_USE error.
+            printf '# Plasma firewall integration requires systemd.\n'
+            printf 'kde-plasma/plasma-meta -firewall\n'
+        fi
+    } | write_file_atomic "$dir/installer" 0644
 }
 
 portage_sync() {
@@ -176,7 +182,7 @@ portage_profile_pattern() {
         stage) printf '%s%s$' "$base" "$suffix" ;;
         desktop) printf '%s/desktop%s$' "$base" "$suffix" ;;
         gnome) printf '%s/desktop/gnome%s$' "$base" "$suffix" ;;
-        kde) printf '%s/desktop/kde%s$' "$base" "$suffix" ;;
+        kde) printf '%s/desktop/(kde|plasma)%s$' "$base" "$suffix" ;;
         hardened) printf '%s/hardened%s$' "$base" "$suffix" ;;
         *) printf '%s%s$' "$base" "$suffix" ;;
     esac

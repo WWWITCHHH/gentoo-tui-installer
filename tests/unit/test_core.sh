@@ -96,6 +96,19 @@ assert_eq "0" "$GI_NETWORK_FORCED" "leaving GNOME clears the forced flag"
 CFG_NETWORK=networkmanager
 config_derived
 assert_eq "networkmanager" "$CFG_NETWORK" "an explicit choice after leaving GNOME is preserved"
+
+# KDE uses the plasma profile and also requires NetworkManager.
+config_defaults
+CFG_DESKTOP=kde
+CFG_PROFILE=stage
+CFG_STAGE_FLAVOR=systemd
+config_derived
+assert_eq "kde" "$CFG_PROFILE" "KDE selects the KDE/Plasma profile"
+assert_eq "desktop-systemd" "$CFG_STAGE_FLAVOR" "KDE uses the desktop systemd Stage3"
+assert_eq "networkmanager" "$CFG_NETWORK" "KDE forces NetworkManager"
+CFG_DESKTOP=xfce
+config_derived
+assert_eq "dhcpcd" "$CFG_NETWORK" "leaving KDE restores dhcpcd"
 CFG_DESKTOP=none
 CFG_NETWORK=none
 config_derived

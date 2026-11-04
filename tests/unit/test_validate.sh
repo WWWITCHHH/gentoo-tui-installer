@@ -110,4 +110,22 @@ CFG_KERNEL_MODE=manual
 assert_ok "manual kernel warns" config_check_consistency
 assert_contains "${CONFIG_WARNINGS[*]}" "Manual kernel" "manual kernel warning present"
 
+CFG_KERNEL_MODE=bin
+CFG_DESKTOP=kde
+CFG_PROFILE=kde
+CFG_NETWORK=networkmanager
+CFG_CREATE_USER=yes
+CFG_USERNAME=alice
+assert_fail "KDE desktop with the KDE profile is consistent" config_check_consistency
+assert_eq "0" "${#CONFIG_WARNINGS[@]}" "KDE configuration has no warnings"
+
+CFG_PROFILE=gnome
+assert_ok "GNOME profile with KDE warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "GNOME" "GNOME profile warning present for KDE"
+
+CFG_PROFILE=kde
+CFG_DESKTOP=xfce
+assert_ok "KDE profile with XFCE warns" config_check_consistency
+assert_contains "${CONFIG_WARNINGS[*]}" "KDE" "KDE profile warning present for XFCE"
+
 finish_tests

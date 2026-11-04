@@ -745,8 +745,8 @@ wizard_services_rows() {
     [[ $CFG_SYSLOG == yes ]] && optional+="syslog "
     optional=${optional% }
     [[ -n $optional ]] || optional=$(T 'none')
-    if [[ $CFG_DESKTOP == gnome ]]; then
-        network_note=$(T 'Forced to NetworkManager by GNOME')
+    if [[ $CFG_DESKTOP == gnome || $CFG_DESKTOP == kde ]]; then
+        network_note=$(T 'Forced to NetworkManager by the selected desktop')
     else
         network_note=$(T 'dhcpcd, NetworkManager or no configuration')
     fi
@@ -760,9 +760,9 @@ wizard_services_edit() {
     local tag=$1 default=""
     case "$tag" in
         network)
-            if [[ $CFG_DESKTOP == gnome ]]; then
+            if [[ $CFG_DESKTOP == gnome || $CFG_DESKTOP == kde ]]; then
                 ui_msg "$(T 'Network configuration')" \
-                    "$(T 'GNOME requires NetworkManager; this setting is forced and cannot be changed.')" || true
+                    "$(T 'GNOME and KDE require NetworkManager; this setting is forced and cannot be changed.')" || true
                 return 0
             fi
             wizard_pick CFG_NETWORK "$(T 'Network configuration')" \
@@ -831,7 +831,8 @@ wizard_desktop_edit() {
                 "$(T 'XFCE or GNOME; the Portage profile follows the choice')" "$CFG_DESKTOP" \
                 "none|$(T 'No desktop environment')|$(T 'Install a console-only system')" \
                 "xfce|XFCE + LightDM|$(T 'Lightweight desktop for everyday use')" \
-                "gnome|GNOME + GDM|$(T 'Full GNOME environment; many packages')"; then
+                "gnome|GNOME + GDM|$(T 'Full GNOME environment; many packages')" \
+                "kde|KDE Plasma + SDDM|$(T 'Full Plasma desktop; many packages')"; then
                 if [[ $CFG_PROFILE != "$old_profile" ]] && state_is_done portage; then
                     ui_msg "$(T 'Profile changed after Portage')" \
                         "$(T 'Portage is already complete, so the new profile %s will not be\napplied to the installed system.' "$CFG_PROFILE")" || true
@@ -897,7 +898,7 @@ wizard_desktop_validate() {
 
 wizard_page_desktop() {
     ui_page_run "$(T 'Desktop environment')" \
-        "$(T 'An explicit choice: no desktop, XFCE or GNOME')" \
+        "$(T 'An explicit choice: no desktop, XFCE, GNOME or KDE Plasma')" \
         wizard_desktop_rows wizard_desktop_edit wizard_desktop_validate
 }
 

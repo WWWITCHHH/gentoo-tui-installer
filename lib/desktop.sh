@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Optional desktop environment: Xorg + XFCE/LightDM or GNOME/GDM.
+# Optional desktop environment: Xorg + XFCE/LightDM, GNOME/GDM or KDE/SDDM.
 
 desktop_is_enabled() {
     [[ ${CFG_DESKTOP:-none} != none ]]
@@ -9,6 +9,7 @@ desktop_label() {
     case "${CFG_DESKTOP:-none}" in
         xfce) printf 'XFCE' ;;
         gnome) printf 'GNOME' ;;
+        kde) printf 'KDE Plasma' ;;
         *) T 'no desktop environment' ;;
     esac
 }
@@ -17,6 +18,7 @@ desktop_display_manager() {
     case "${CFG_DESKTOP:-none}" in
         xfce) printf 'lightdm' ;;
         gnome) printf 'gdm' ;;
+        kde) printf 'sddm' ;;
         *) printf '' ;;
     esac
 }
@@ -39,14 +41,20 @@ desktop_packages() {
             # display manager choice explicit and easy to audit.
             printf '%s\n' gnome-base/gnome gnome-base/gdm
             ;;
+        kde)
+            # plasma-meta pulls the Plasma desktop and SDDM via its default
+            # display-manager/sddm flags. Listing SDDM explicitly keeps the
+            # display manager choice auditable.
+            printf '%s\n' kde-plasma/plasma-meta gui-apps/sddm
+            ;;
     esac
     # Every graphical session needs a D-Bus session bus. OpenRC additionally
-    # needs a logind-compatible provider. GDM has
-    # REQUIRED_USE="^^ ( elogind systemd )"; the GNOME desktop profile selects
+    # needs a logind-compatible provider. GDM and SDDM have
+    # REQUIRED_USE="^^ ( elogind systemd )"; the desktop profiles select
     # elogind on OpenRC systems.
     printf '%s\n' sys-apps/dbus
     if [[ $CFG_INIT == openrc ]]; then
-        # GDM and LightDM do not ship an OpenRC init script. The
+        # GDM, LightDM and SDDM do not ship an OpenRC init script. The
         # display-manager wrapper provides /etc/init.d/display-manager.
         printf '%s\n' gui-libs/display-manager-init sys-auth/elogind
     fi
@@ -127,6 +135,9 @@ desktop_intro() {
         gnome)
             body+=" $(T 'GNOME uses GDM and requires a lot of space; installation may take several hours.')"
             ;;
+        kde)
+            body+=" $(T 'KDE Plasma uses SDDM and requires a lot of space; installation may take several hours.')"
+            ;;
     esac
     body+=$'\n\n'"$(T 'Make sure CFLAGS contains no unsuitable optimizations and VIDEO_CARDS lists\nyour GPU drivers: with empty VIDEO_CARDS, Xorg may run without acceleration.')"
     log_info "desktop intro: $label"
@@ -159,6 +170,13 @@ desktop_verify() {
     case "$CFG_DESKTOP" in
         xfce) session="$GI_ROOT/usr/bin/startxfce4" ;;
         gnome) session="$GI_ROOT/usr/bin/gnome-session" ;;
+        kde)
+            if [[ -e "$GI_ROOT/usr/bin/startplasma-x11" ]]; then
+                session="$GI_ROOT/usr/bin/startplasma-x11"
+            else
+                session="$GI_ROOT/usr/bin/startplasma-wayland"
+            fi
+            ;;
         *) session="" ;;
     esac
     if [[ -n $session && ! -e $session ]]; then

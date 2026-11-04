@@ -317,7 +317,20 @@ assert_eq "dhcpcd" "$CFG_NETWORK" "leaving GNOME restores dhcpcd"
 wizard_services_rows
 services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
 assert_not_contains "$services_rows" "Forced to NetworkManager" \
+    "Services unlocks the network after leaving GNOME"assert_not_contains "$services_rows" "Forced to NetworkManager" \
     "Services unlocks the network after leaving GNOME"
+
+config_defaults
+CFG_DESKTOP=kde
+config_derived
+assert_eq "networkmanager" "$CFG_NETWORK" "KDE forces NetworkManager before Services"
+wizard_services_rows
+services_rows=$(printf '%s\n' "${UI_PAGE_ROWS[@]}")
+assert_contains "$services_rows" "Forced to NetworkManager" \
+    "Services marks the forced KDE network stack"
+CFG_DESKTOP=xfce
+config_derived
+assert_eq "dhcpcd" "$CFG_NETWORK" "leaving KDE restores dhcpcd"
 
 # The final confirmation must show consistency warnings and use an explicit
 # "Continue anyway" label when the configuration is suspicious.
