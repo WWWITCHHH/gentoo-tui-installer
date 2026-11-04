@@ -37,7 +37,7 @@ lib/
   system.sh               hostname, время, locale, fstab, пользователи
   tools.sh                сеть, службы, sudo, gentoolkit
   bootloader.sh           GRUB UEFI/BIOS и проверка grub.cfg
-  desktop.sh              Xorg, XFCE/LightDM или GNOME/GDM
+  desktop.sh              Xorg, XFCE/LightDM, GNOME/GDM или KDE/SDDM
   finalize.sh             depclean, очистка, размонтирование
   wizard.sh               интерактивные меню и редактирование конфигурации
   main.sh                 CLI, preflight-поток, оркестрация этапов
@@ -102,7 +102,7 @@ main()
                         ├─ build      init system, Stage3, Portage, CFLAGS, MAKEOPTS
                         ├─ kernel     явный выбор ядра и загрузчика
                         ├─ users      пользователь и пароли в памяти
-                        ├─ desktop    без графики, XFCE или GNOME
+                        ├─ desktop    без графики, XFCE, GNOME или KDE Plasma
                         ├─ services   сеть, SSH, cron, chrony, syslog
                         └─ review     сводка + подтверждение стирания и старта
                    └─ main_start_installation()
@@ -365,10 +365,11 @@ UUID, повторное монтирование не выполняется.
 5. проверяет наличие Xorg, сеанса и дисплей-менеджера.
 
 Профиль Portage выбирается раньше, в `config_derived`: XFCE → `desktop`,
-GNOME → `gnome`; явные `kde` и `hardened` не перезаписываются. GNOME-профиль
-важен для GDM, которому нужен ровно один из `elogind`/`systemd`. Для любого
-OpenRC-окружения `portage_write_make_conf` добавляет `USE=elogind`, чтобы
-LightDM/GDM собирались и с профилем `hardened`. Если `DESKTOP` изменён после
+GNOME → `gnome`, KDE → `kde` (профиль `desktop/plasma`); явный `hardened`
+сохраняется. Профили GNOME/KDE важны для GDM/SDDM, которым нужен ровно один из
+`elogind`/`systemd`. Для любого OpenRC-окружения `portage_write_make_conf`
+добавляет `USE=elogind`, чтобы LightDM/GDM/SDDM собирались и с профилем
+`hardened`. Если `DESKTOP` изменён после
 Portage, профиль установленной системы уже не меняется; мастер предупреждает
 об этом.
 

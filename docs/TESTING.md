@@ -15,17 +15,17 @@ make lint      # только ShellCheck
 
 | Файл | Что покрывает |
 |---|---|
-| `tests/unit/test_core.sh` | `human_mib`, пути разделов, `shell_quote`, `render_cmd`, `config_derived`, автоматический desktop Stage3, roundtrip конфигурации, комментарии и ошибки парсера, state, `make_jobs_suggestion`, определение `VIDEO_CARDS` для Intel/AMD/NVIDIA/VMware/QXL/stdvga/ASPEED/Matrox/virtio. |
-| `tests/unit/test_validate.sh` | hostname, username, timezone, locale, URL, MiB, диапазоны, USE, CFLAGS, kernel cmdline, bool и нефатальные предупреждения о противоречиях конфигурации. |
+| `tests/unit/test_core.sh` | `human_mib`, пути разделов, `shell_quote`, `render_cmd`, `config_derived`, автоматический desktop Stage3, KDE-профиль и NetworkManager, roundtrip конфигурации, комментарии и ошибки парсера, state, `make_jobs_suggestion`, определение `VIDEO_CARDS` для Intel/AMD/NVIDIA/VMware/QXL/stdvga/ASPEED/Matrox/virtio. |
+| `tests/unit/test_validate.sh` | hostname, username, timezone, locale, URL, MiB, диапазоны, USE, CFLAGS, kernel cmdline, bool, KDE-профиль и нефатальные предупреждения о противоречиях конфигурации. |
 | `tests/unit/test_disks.sh` | UEFI/BIOS-планы, swap и `/home`, отсутствие перекрытий, минимальный размер, BIOS > 2 TiB, NVMe-имена, `parted`-типы ФС, fallback-определение размера virtio-диска через `blockdev`/`lsblk`/sysfs. |
 | `tests/unit/test_kernel.sh` | удаление `root=`, `/etc/kernel/cmdline`, dracut config, `/etc/default/grub`, quoting одинарных кавычек, состав автоматического `.config` и список обязательных `CONFIG_*`. |
 | `tests/unit/test_ui.sh` | progress bar, перенос текста, валидатор целых чисел, панель действий `<Back>`/`<Next>`/`<Save>`/`<Help>`/`<Exit>`, сводка, декодирование стрелок/F1/F2/F10/Ctrl-S, серии стрелок и неизвестные escape-последовательности, маркеры `[ ]`/`[*]`/`( )`/`(*)`, окна выбора, модальное подтверждение, `ui_page_run` и отсутствие ожидания в unattended-режиме. |
-| `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля, сводка на английском и русском, отсутствие паролей в `install.conf`, пустой `KERNEL_MODE` по умолчанию, явный выбор ядра, требования к паролям, отсутствие секретов в тексте проверки, единственная настройка sudo, предупреждения в финальном подтверждении, Easy/Advanced defaults, скрытие строк, read-only `VIDEO_CARDS`, порядок страниц и принудительный NetworkManager для GNOME. |
+| `tests/unit/test_wizard.sh` | изоляция stdout в `wizard_bool`, очистка `UI_RESULT`/`UI_SECRET` после ввода пароля, сводка на английском и русском, отсутствие паролей в `install.conf`, пустой `KERNEL_MODE` по умолчанию, явный выбор ядра, требования к паролям, отсутствие секретов в тексте проверки, единственная настройка sudo, предупреждения в финальном подтверждении, Easy/Advanced defaults, скрытие строк, read-only `VIDEO_CARDS`, порядок страниц и принудительный NetworkManager для GNOME/KDE. |
 | `tests/unit/test_i18n.sh` | структура `ru.tsv`, перевод статических и printf-строк, сохранение подстановок, выбор/generation locale, первый выбор языка, панель действий и сводка. |
-| `tests/unit/test_desktop.sh` | списки пакетов XFCE/GNOME, LightDM/GDM, `gui-libs/display-manager-init` для OpenRC, `/etc/conf.d/display-manager`, systemd-цель, группы пользователя, проверка установки, сетевое требование для незавершённого desktop-этапа, пропуск desktop-этапа при `DESKTOP=none` и autounmask-опции Portage. |
+| `tests/unit/test_desktop.sh` | списки пакетов XFCE/GNOME/KDE, LightDM/GDM/SDDM, `gui-libs/display-manager-init` для OpenRC, профиль `desktop/plasma`, `/etc/conf.d/display-manager`, systemd-цель, группы пользователя, проверка установки, сетевое требование для незавершённого desktop-этапа, пропуск desktop-этапа при `DESKTOP=none` и autounmask-опции Portage. |
 | `tests/unit/test_config_example.sh` | все ключи `CONFIG_KEYS` присутствуют, нет дубликатов и паролей, пример загружается и даёт ожидаемые значения. |
 
-На момент 1.7.0 выполняется 527 assertions в 9 файлах. Число может меняться;
+На момент 1.8.0 выполняется 561 assertions в 9 файлах. Число может меняться;
 важен нулевой код возврата, а не точное количество.
 
 ### Harness
@@ -82,7 +82,7 @@ sudo apt-get install shellcheck
 
 ## Ручная проверка в виртуальной машине
 
-В версии 1.7.0 **нет автоматического интеграционного теста с реальной
+В версии 1.8.0 **нет автоматического интеграционного теста с реальной
 разметкой и загрузкой**. Перед использованием на физическом компьютере
 обязательно пройдите сценарий в VM.
 
@@ -145,7 +145,7 @@ qemu-system-x86_64 \
 Опционально:
 
 - [ ] Каждый вариант stage3 (`openrc`, `systemd`, `desktop-*`).
-- [ ] XFCE на systemd и GNOME на OpenRC (проверка профилей и служб).
+- [ ] XFCE на systemd, GNOME на OpenRC и KDE Plasma на systemd/OpenRC (проверка профилей, SDDM и служб).
 - [ ] Смена `DESKTOP` после Portage: предупреждение мастера и работу с текущим
       профилем.
 - [ ] XFS/ext4/Btrfs для root и `/home` в разных комбинациях.

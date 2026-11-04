@@ -17,7 +17,7 @@ Minimal CD
   ├─ глава 8  → система: hostname, время, locale, fstab, учётные записи
   ├─ глава 9  → службы и дополнительные утилиты
   ├─ глава 10 → GRUB: установка и генерация grub.cfg
-  ├─ графика  → Xorg + XFCE/LightDM или GNOME/GDM (вне core Handbook)
+  ├─ графика  → Xorg + XFCE/LightDM, GNOME/GDM или KDE/SDDM (вне core Handbook)
   └─ глава 11 → depclean, очистка, размонтирование, reboot
 ```
 
@@ -159,8 +159,9 @@ CD в нужном режиме — UEFI или BIOS. Preflight проверяе
 
 Варианты stage3: `openrc`, `systemd`, `desktop-openrc`, `desktop-systemd`.
 Desktop-варианты автоматически выбирают профиль `desktop`, если пользователь не
-выбрал `gnome`, `kde` или `hardened`. Выбор `DESKTOP=xfce` или `DESKTOP=gnome`
-также подстраивает профиль: XFCE выбирает `desktop`, GNOME — `gnome`; явные
+выбрал `gnome`, `kde` или `hardened`. Выбор `DESKTOP=xfce`, `DESKTOP=gnome`
+или `DESKTOP=kde` также подстраивает профиль: XFCE выбирает `desktop`,
+GNOME — `gnome`, KDE — `kde`; явные
 `kde` и `hardened` сохраняются.
 
 ### Глава 6. Установка базовой системы
@@ -305,20 +306,21 @@ BIOS: grub-install --target=i386-pc --recheck /dev/sdX
 |---|---|---|---|---|
 | `xfce` | Xorg, `sys-apps/dbus`, `xfce-base/xfce4-meta`, `x11-misc/lightdm`, `x11-misc/lightdm-gtk-greeter`, `sys-auth/elogind` и `gui-libs/display-manager-init` (OpenRC) | LightDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `lightdm.service`, `graphical.target` |
 | `gnome` | Xorg, `sys-apps/dbus`, `gnome-base/gnome`, `gnome-base/gdm`, `sys-auth/elogind` и `gui-libs/display-manager-init` (OpenRC) | GDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `gdm.service`, `graphical.target` |
+| `kde` | Xorg, `sys-apps/dbus`, `kde-plasma/plasma-meta`, `gui-apps/sddm`, `sys-auth/elogind` и `gui-libs/display-manager-init` (OpenRC) | SDDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `sddm.service`, `graphical.target` |
 
 Для OpenRC установщик пишет `/etc/conf.d/display-manager` с
-`DISPLAYMANAGER="lightdm"` или `DISPLAYMANAGER="gdm"` и устанавливает
+`DISPLAYMANAGER="lightdm"`, `DISPLAYMANAGER="gdm"` или `DISPLAYMANAGER="sddm"` и устанавливает
 `gui-libs/display-manager-init`, так как GDM и LightDM не предоставляют
 собственный OpenRC init-скрипт. Для systemd включается соответствующий unit и
 графическая цель загрузки.
 
-При выборе GNOME страница «Службы» принудительно выставляет `NETWORK=networkmanager`:
-профиль GNOME включает интеграцию с NetworkManager. Если вернуться к XFCE или
-отказаться от графики, принудительный флаг снимается и восстанавливается
-`dhcpcd`.
+При выборе GNOME или KDE страница «Службы» принудительно выставляет
+`NETWORK=networkmanager`: их профили включают интеграцию с NetworkManager. Если
+вернуться к XFCE или отказаться от графики, принудительный флаг снимается и
+восстанавливается `dhcpcd`.
 
 Профиль Portage подбирается до этапа Portage: XFCE использует `desktop`, GNOME —
-`gnome`. При выборе графики Stage3 автоматически становится `desktop-openrc`
+`gnome`, KDE — `kde` (профиль `desktop/plasma`). При выборе графики Stage3 автоматически становится `desktop-openrc`
 или `desktop-systemd`. Это важно для GDM: ему нужен `elogind` или `systemd`, а
 GNOME-профиль включает нужные USE-флаги. Если пользователь явно выбрал `kde` или `hardened`,
 установщик не перезаписывает профиль. Для OpenRC-графики в `USE` добавляется
@@ -331,10 +333,10 @@ GNOME-профиль включает нужные USE-флаги. Если по
 оно пусто, Xorg может работать только с базовым режимом без аппаратного
 ускорения; установщик предупреждает об этом.
 
-**Отличия:** поддерживаются только XFCE и GNOME. Установщик не настраивает
+**Отличия:** поддерживаются XFCE, GNOME и KDE Plasma. Установщик не настраивает
 Wayland-сессии вручную, темы, автологин, несколько мониторов и параметры
-клавиатуры внутри графической сессии. KDE-профиль Portage остаётся доступен,
-но KDE Plasma установщик не устанавливает.
+клавиатуры внутри графической сессии. KDE использует профиль `kde`
+(`desktop/plasma`) и SDDM; для OpenRC устанавливается display-manager wrapper.
 
 ### Глава 11. Завершение установки
 
@@ -361,7 +363,7 @@ stage3 и временные файлы, снимает chroot-монтиров�
 - несколько дисков в одной установке;
 - автоматический dual boot;
 - альтернативные загрузчики (systemd-boot, GRUB с другими целями и т. п.);
-- KDE Plasma и другие графические окружения/оконные менеджеры;
+- другие графические окружения и оконные менеджеры, кроме XFCE, GNOME и KDE Plasma;
 - настройка автологина, тем, Wayland-композиторов и параметров Xorg.
 
 Если нужен один из этих сценариев, используйте Handbook напрямую или добавьте

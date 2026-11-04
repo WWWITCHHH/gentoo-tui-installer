@@ -4,6 +4,32 @@
 [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/), версии следуют
 [Semantic Versioning](https://semver.org/lang/ru/).
 
+## [1.8.0] - 2026-11-04
+
+### Добавлено
+
+- Поддержка KDE Plasma + SDDM как третьего графического окружения.
+- OpenRC-профиль KDE: `kde-plasma/plasma-meta`, `gui-apps/sddm`,
+  `gui-libs/display-manager-init`, `sys-auth/elogind`; systemd использует
+  `sddm.service` и `graphical.target`.
+- Принудительный NetworkManager для KDE, как и для GNOME; при возврате к XFCE
+  или отказу от графики восстанавливается `dhcpcd`.
+- Для OpenRC KDE отключается `plasma-meta[firewall]`, поскольку эта интеграция
+  требует systemd.
+- Исправлен поиск профиля KDE: актуальный профиль называется
+  `desktop/plasma`, а не `desktop/kde`.
+
+### Изменено
+
+- `desktop_label`, `desktop_display_manager`, `desktop_packages`,
+  `desktop_verify`, `desktop_intro` и страница графики поддерживают KDE.
+- `portage_profile_pattern` принимает `desktop/plasma` и `desktop/kde`.
+- Документация и пример конфигурации обновлены для KDE.
+
+### Тесты
+
+- 561 assertions в 9 файлах.
+
 ## [1.7.0] - 2026-11-04
 
 ### Добавлено

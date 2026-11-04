@@ -82,14 +82,16 @@ MIRROR="https://distfiles.gentoo.org"
 STAGE_URL=""
 
 # stage, desktop, gnome, kde or hardened.
-# XFCE and GNOME adjust generic stage/desktop profiles automatically; explicit
+# XFCE, GNOME and KDE adjust generic stage/desktop profiles automatically; explicit
 # kde and hardened profiles are preserved.
 PROFILE="stage"
 
-# none, xfce or gnome. The desktop stage runs after GRUB and before finalization.
-# xfce installs Xorg + XFCE + LightDM; gnome installs Xorg + GNOME + GDM.
+# none, xfce, gnome or kde. The desktop stage runs after GRUB and before finalization.
+# xfce installs Xorg + XFCE + LightDM; gnome installs Xorg + GNOME + GDM;
+# kde installs Xorg + KDE Plasma + SDDM.
 # Selecting a desktop also upgrades the Stage3 variant to desktop-openrc or
-# desktop-systemd automatically.
+# desktop-systemd automatically. GNOME and KDE force NetworkManager; XFCE and
+# no desktop use dhcpcd unless changed manually.
 DESKTOP="none"
 
 # Detect CPU_FLAGS_X86 with cpuid2cpuflags during the Portage stage.

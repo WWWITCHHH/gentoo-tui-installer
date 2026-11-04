@@ -123,7 +123,7 @@ DISK=""
 | `MIRROR` | HTTP(S)-URL | `https://distfiles.gentoo.org` | Базовый URL зеркала distfiles. |
 | `STAGE_URL` | HTTP(S)-URL или пусто | пусто | Прямой URL stage3 вместо latest-stage3. |
 | `PROFILE` | `stage`, `desktop`, `gnome`, `kde`, `hardened` | `stage` | Профиль Portage; обычно вычисляется из init-системы и графики. |
-| `DESKTOP` | `none`, `xfce`, `gnome` | `none` | Графическое окружение; `none` — не устанавливать. |
+| `DESKTOP` | `none`, `xfce`, `gnome`, `kde` | `none` | Графическое окружение; `none` — не устанавливать. |
 | `CPU_FLAGS` | `yes`, `no` | `yes` | Определять `CPU_FLAGS_X86` через `cpuid2cpuflags`. |
 | `UPDATE_WORLD` | `yes`, `no` | `no` | Выполнять `emerge --update --deep --newuse @world`. |
 | `MAKE_JOBS` | `auto` или целое 1–256 | `auto` | Число задач `make`. |
@@ -142,18 +142,24 @@ DISK=""
   `stage`;
 - `gnome` — Xorg, GNOME и GDM; профиль `gnome`, если выбран `stage` или
   generic `desktop`. GDM требует `elogind` (OpenRC) или `systemd`, поэтому
-  GNOME-профиль важен.
+  GNOME-профиль важен;
+- `kde` — Xorg, KDE Plasma и SDDM; профиль `kde` (`desktop/plasma`), если
+  выбран `stage` или generic `desktop`. SDDM также требует `elogind` или
+  `systemd`; на OpenRC дополнительно ставится `gui-libs/display-manager-init`,
+  а `plasma-meta[firewall]` отключается, поскольку эта интеграция требует
+  systemd.
 
-Явные профили `kde` и `hardened` не перезаписываются. Если сменить `DESKTOP`
+Явный профиль `hardened` не перезаписывается; `stage`/`desktop` подстраиваются
+под выбранное окружение. Если сменить `DESKTOP`
 после завершения этапа Portage, пакеты установятся, но профиль уже не будет
 применён к базовой системе; для смены профиля сбросьте состояние.
 
 Для OpenRC установщик включает `dbus`, `elogind` и `display-manager`, а также
 пишет `/etc/conf.d/display-manager`; в `USE` добавляется `elogind`, потому что
-LightDM и GDM требуют ровно один из `elogind`/`systemd` (это важно и для явного
-профиля `hardened`). Для systemd включаются `lightdm.service` или
-`gdm.service` и `graphical.target`. Пользователь добавляется в доступные
-группы `plugdev`, `input`, `render`, `video`, `audio`.
+LightDM, GDM и SDDM требуют ровно один из `elogind`/`systemd` (это важно и для
+явного профиля `hardened`). Для systemd включаются `lightdm.service`,
+`gdm.service` или `sddm.service` и `graphical.target`. Пользователь добавляется
+в доступные группы `plugdev`, `input`, `render`, `video`, `audio`.
 
 ### Ядро и загрузчик
 
@@ -185,7 +191,7 @@ LightDM и GDM требуют ровно один из `elogind`/`systemd` (эт
 | `LOCALE` | UTF-8 локаль | `en_US.UTF-8` | Системная локаль. |
 | `KEYMAP` | имя keymap | `us` | Раскладка консоли. |
 | `HWCLOCK` | `UTC`, `local` | `UTC` | Хранение времени в RTC. |
-| `NETWORK` | `dhcpcd`, `networkmanager`, `none` | `dhcpcd` | Сетевой стек установленной системы; для GNOME принудительно `networkmanager`. |
+| `NETWORK` | `dhcpcd`, `networkmanager`, `none` | `dhcpcd` | Сетевой стек установленной системы; для GNOME и KDE принудительно `networkmanager`. |
 | `SSH` | `yes`, `no` | `no` | Установить и включить OpenSSH. |
 | `CRON` | `yes`, `no` | `yes` | Установить и включить cronie. |
 | `CHRONY` | `yes`, `no` | `yes` | Установить и включить chronyd. |
@@ -238,8 +244,9 @@ systemd; Stage3 `desktop-*` подставляется автоматическ�
 графическое окружение. `VIDEO_CARDS` на новой установке определяется по
 видимому GPU; на странице «Графика» его можно выбрать из списка или ввести своё
 значение. Графика идёт до страницы «Службы»: при выборе GNOME сеть
-принудительно переключается на NetworkManager, а при возврате к XFCE или
-отказу от графики принудительный флаг снимается и восстанавливается dhcpcd.
+принудительно переключается на NetworkManager (для GNOME и KDE), а при возврате
+к XFCE или отказу от графики принудительный флаг снимается и восстанавливается
+dhcpcd.
 
 На каждой странице стрелки перемещают фокус по полям, `Enter` открывает
 редактор или окно выбора, `Esc` возвращает назад. С панели действий доступны
@@ -263,7 +270,8 @@ systemd; Stage3 `desktop-*` подставляется автоматическ�
   `PROFILE="stage"`;
 - `DESKTOP=xfce` выбирает `desktop`, если профиль был `stage`;
 - `DESKTOP=gnome` выбирает `gnome`, если профиль был `stage` или `desktop`;
-  явные `kde` и `hardened` сохраняются;
+- `DESKTOP=kde` выбирает `kde`, если профиль был `stage` или `desktop`;
+  явный `hardened` сохраняется;
 - при `SWAP_MODE != custom` размер `SWAP_MIB` обнуляется;
 - при `HOME_MODE=no` очищаются `PART_HOME`, `UUID_HOME`, а `FORMAT_HOME`
   становится `no`;
