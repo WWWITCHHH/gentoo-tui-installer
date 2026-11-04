@@ -99,7 +99,8 @@ CD в нужном режиме — UEFI или BIOS. Preflight проверяе
 Сеть live-среды настраивается пользователем до запуска установщика. Установщик
 не изменяет сеть Minimal CD; он только проверяет HTTPS-доступ к зеркалу и
 копирует `/etc/resolv.conf` в chroot на этапе Portage. Для установленной системы
-можно выбрать `dhcpcd`, `NetworkManager` или `none`.
+можно выбрать `dhcpcd`, `NetworkManager` или `none`; для GNOME установщик
+принудительно выбирает `NetworkManager`.
 
 ### Глава 4. Подготовка дисков
 
@@ -302,14 +303,19 @@ BIOS: grub-install --target=i386-pc --recheck /dev/sdX
 
 | Выбор | Пакеты | Дисплей-менеджер | Службы OpenRC | systemd |
 |---|---|---|---|---|
-| `xfce` | Xorg, `sys-apps/dbus`, `xfce-base/xfce4-meta`, `x11-misc/lightdm`, `x11-misc/lightdm-gtk-greeter`, `sys-auth/elogind` (OpenRC) | LightDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `lightdm.service`, `graphical.target` |
-| `gnome` | Xorg, `sys-apps/dbus`, `gnome-base/gnome`, `gnome-base/gdm`, `sys-auth/elogind` (OpenRC) | GDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `gdm.service`, `graphical.target` |
+| `xfce` | Xorg, `sys-apps/dbus`, `xfce-base/xfce4-meta`, `x11-misc/lightdm`, `x11-misc/lightdm-gtk-greeter`, `sys-auth/elogind` и `gui-libs/display-manager-init` (OpenRC) | LightDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `lightdm.service`, `graphical.target` |
+| `gnome` | Xorg, `sys-apps/dbus`, `gnome-base/gnome`, `gnome-base/gdm`, `sys-auth/elogind` и `gui-libs/display-manager-init` (OpenRC) | GDM | `dbus` (default), `elogind` (boot), `display-manager` (default) | `gdm.service`, `graphical.target` |
 
 Для OpenRC установщик пишет `/etc/conf.d/display-manager` с
-`DISPLAYMANAGER="lightdm"` или `DISPLAYMANAGER="gdm"`. Служба
-`display-manager` приходит из `gui-libs/display-manager-init`, которую
-подтягивает `xorg-server` в OpenRC-профиле. Для systemd включается
-соответствующий unit и графическая цель загрузки.
+`DISPLAYMANAGER="lightdm"` или `DISPLAYMANAGER="gdm"` и устанавливает
+`gui-libs/display-manager-init`, так как GDM и LightDM не предоставляют
+собственный OpenRC init-скрипт. Для systemd включается соответствующий unit и
+графическая цель загрузки.
+
+При выборе GNOME страница «Службы» принудительно выставляет `NETWORK=networkmanager`:
+профиль GNOME включает интеграцию с NetworkManager. Если вернуться к XFCE или
+отказаться от графики, принудительный флаг снимается и восстанавливается
+`dhcpcd`.
 
 Профиль Portage подбирается до этапа Portage: XFCE использует `desktop`, GNOME —
 `gnome`. При выборе графики Stage3 автоматически становится `desktop-openrc`

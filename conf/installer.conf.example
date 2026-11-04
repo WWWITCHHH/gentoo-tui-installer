@@ -139,7 +139,7 @@ HWCLOCK="UTC"           # UTC or local
 # Services and accounts
 # ---------------------------------------------------------------------------
 
-NETWORK="dhcpcd"        # dhcpcd, networkmanager or none
+NETWORK="dhcpcd"        # dhcpcd, networkmanager or none; GNOME forces NetworkManager
 SSH="no"                # install and enable OpenSSH
 CRON="yes"              # install and enable cronie
 CHRONY="yes"            # install and enable chronyd

@@ -102,8 +102,8 @@ main()
                         ├─ build      init system, Stage3, Portage, CFLAGS, MAKEOPTS
                         ├─ kernel     явный выбор ядра и загрузчика
                         ├─ users      пользователь и пароли в памяти
-                        ├─ services   сеть, SSH, cron, chrony, syslog
                         ├─ desktop    без графики, XFCE или GNOME
+                        ├─ services   сеть, SSH, cron, chrony, syslog
                         └─ review     сводка + подтверждение стирания и старта
                    └─ main_start_installation()
                         ├─ предупреждение (только без GI_INSTALL_CONFIRMED)
