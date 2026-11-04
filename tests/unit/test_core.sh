@@ -101,7 +101,13 @@ assert_eq "nouveau" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" 
 make_drm_card 0x15ad 0x0405
 assert_eq "vmware" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "VMware GPU"
 make_drm_card 0x1234 0x1111
+assert_eq "" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "QEMU stdvga uses modesetting"
+make_drm_card 0x1b36 0x0100
 assert_eq "qxl" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "QEMU QXL GPU"
+make_drm_card 0x1a03 0x2000
+assert_eq "ast" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "ASPEED GPU"
+make_drm_card 0x102b 0x0522
+assert_eq "mga" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "Matrox GPU"
 make_drm_card 0x1af4 0x1050
 assert_eq "virgl" "$(GI_DRM_CLASS_DIR=$drm_root hardware_detect_video_cards)" "virtio GPU"
 rm -rf -- "$drm_root"

@@ -183,7 +183,15 @@ hardware_detect_video_cards() {
         device=${device,,}
         case "$vendor" in
             0x15ad) printf 'vmware'; return 0 ;;
-            0x1234) printf 'qxl'; return 0 ;;
+            0x1b36)
+                if [[ $device == 0x0100 || $device == 0x0101 ]]; then
+                    printf 'qxl'
+                    return 0
+                fi
+                ;;
+            0x1a03) printf 'ast'; return 0 ;;
+            0x102b) printf 'mga'; return 0 ;;
+            0x1234) return 0 ;; # QEMU/Bochs stdvga: use modesetting
             0x1af4)
                 if [[ $device == 0x1050 ]]; then
                     printf 'virgl'
@@ -194,13 +202,17 @@ hardware_detect_video_cards() {
             0x1002) printf 'amdgpu radeonsi'; return 0 ;;
             0x10de) printf 'nouveau'; return 0 ;;
             0x80ee) return 0 ;;
+            0x1414) return 0 ;; # Hyper-V: use modesetting
+            0x1013) return 0 ;; # Cirrus: use modesetting
         esac
     done
     if command -v lspci >/dev/null 2>&1; then
         line=$(lspci -nn 2>/dev/null | grep -Ei 'vga|3d|display' | head -n 1 || true)
         case "$line" in
             *'[15ad:'*) printf 'vmware' ;;
-            *'[1234:'*) printf 'qxl' ;;
+            *'[1b36:'*) printf 'qxl' ;;
+            *'[1a03:'*) printf 'ast' ;;
+            *'[102b:'*) printf 'mga' ;;
             *'[1af4:'*) printf 'virgl' ;;
             *'[8086:'*) printf 'intel' ;;
             *'[1002:'*) printf 'amdgpu radeonsi' ;;
